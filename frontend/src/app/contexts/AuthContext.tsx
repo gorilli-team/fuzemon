@@ -26,6 +26,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check if Privy is available
+  const hasPrivyAppId = !!process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+
   const privy = usePrivy();
   const { logout: privyLogout } = useLogout();
   const { login: privyLogin } = useLogin({
@@ -47,8 +51,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [privyLogout]);
 
   const login = useCallback(() => {
+    if (!hasPrivyAppId) {
+      console.warn("Privy App ID not configured. Wallet connection disabled.");
+      return;
+    }
     privyLogin();
-  }, [privyLogin]);
+  }, [privyLogin, hasPrivyAppId]);
 
   const handlePrivyLogin = useCallback(async () => {
     if (!privy.ready || !privy.authenticated || !privy.user?.wallet?.address) {
@@ -65,6 +73,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [privy]);
 
   useEffect(() => {
+    // If Privy is not available, set loading to false
+    if (!hasPrivyAppId) {
+      setIsLoading(false);
+      return;
+    }
+
     if (!privy.ready) return;
 
     if (privy.authenticated && privy.user?.wallet?.address) {
@@ -76,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setToken(null);
       setIsLoading(false);
     }
-  }, [privy.ready, privy.authenticated, privy.user]);
+  }, [privy.ready, privy.authenticated, privy.user, hasPrivyAppId]);
 
   const contextValue = {
     token,

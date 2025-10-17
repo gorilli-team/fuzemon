@@ -5,6 +5,9 @@ import { useAuth } from "../contexts/AuthContext";
 export default function Header() {
   const { login, logout, isAuthenticated, isLoading, address } = useAuth();
 
+  // Check if Privy is available
+  const hasPrivyAppId = !!process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+
   const formatAddress = (addr: string) => {
     if (!addr) return "";
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -41,10 +44,14 @@ export default function Header() {
         ) : (
           <button
             onClick={login}
-            disabled={isLoading}
+            disabled={isLoading || !hasPrivyAppId}
             className="px-4 py-2 text-sm font-medium text-white bg-accent-purple rounded-lg hover:bg-accent-purple/80 disabled:opacity-50 transition-colors"
           >
-            {isLoading ? "Connecting..." : "Connect Wallet"}
+            {!hasPrivyAppId
+              ? "Wallet Disabled"
+              : isLoading
+              ? "Connecting..."
+              : "Connect Wallet"}
           </button>
         )}
       </div>
