@@ -34,10 +34,21 @@ export const fuzemonChain = defineChain({
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: ReactNode }) {
+  const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+  
+  // If no Privy App ID, render without Privy to prevent crashes
+  if (!privyAppId) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>{children}</AuthProvider>
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <PrivyProvider
-        appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || "clx123456789"}
+        appId={privyAppId}
         config={{
           appearance: {
             theme: "dark",
