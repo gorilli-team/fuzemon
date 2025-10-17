@@ -26,7 +26,7 @@ const networks: NetworkInfo[] = [
   },
 ];
 
-export default function DeployFunds() {
+export default function DeployFundsPage() {
   const [fromNetwork, setFromNetwork] = useState<NetworkInfo>(networks[0]);
   const [toNetwork, setToNetwork] = useState<NetworkInfo>(networks[1]);
   const [amount, setAmount] = useState<string>("");
@@ -112,6 +112,13 @@ export default function DeployFunds() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white mb-2">Deploy Funds</h1>
+        <p className="text-gray-400">
+          Bridge your assets between Ethereum Sepolia and Monad Testnet
+        </p>
+      </div>
+
       {/* Bridge Interface */}
       <div className="bg-dark-800 rounded-lg p-6">
         <h2 className="text-xl font-semibold text-white mb-6">Bridge Assets</h2>

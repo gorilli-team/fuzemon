@@ -1,23 +1,10 @@
 "use client";
 import React from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-interface SidebarProps {
-  selectedPage: string;
-  setSelectedPage: React.Dispatch<React.SetStateAction<string>>;
-}
-
-export default function Sidebar({
-  selectedPage,
-  setSelectedPage,
-}: SidebarProps) {
-  const router = useRouter();
-
-  const handlePageChange = (page: string) => {
-    setSelectedPage(page);
-    // Since we only have Dashboard, just stay on the root page
-    router.push("/");
-  };
+export default function Sidebar() {
+  const pathname = usePathname();
 
   return (
     <aside className="w-64 text-white flex flex-col bg-dark-800 h-screen sticky top-0 border-r border-dark-600 overflow-y-auto">
@@ -28,26 +15,37 @@ export default function Sidebar({
       <nav className="flex-1 p-4 overflow-hidden">
         <ul className="space-y-2">
           <li>
-            <button
-              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 ${
-                selectedPage === "Deploy Funds" ? "bg-dark-700 text-white" : ""
+            <Link
+              href="/dashboard"
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 block ${
+                pathname === "/dashboard" ? "bg-dark-700 text-white" : ""
               }`}
-              onClick={() => handlePageChange("Deploy Funds")}
+            >
+              <i className="fa-solid fa-chart-line pr-2"></i>
+              <span>Dashboard</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/deploy-funds"
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 block ${
+                pathname === "/deploy-funds" ? "bg-dark-700 text-white" : ""
+              }`}
             >
               <i className="fa-solid fa-money-bill pr-2"></i>
               <span>Deploy Funds</span>
-            </button>
+            </Link>
           </li>
           <li>
-            <button
-              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 ${
-                selectedPage === "Orders" ? "bg-dark-700 text-white" : ""
+            <Link
+              href="/orders"
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 block ${
+                pathname === "/orders" ? "bg-dark-700 text-white" : ""
               }`}
-              onClick={() => handlePageChange("Orders")}
             >
               <i className="fa-solid fa-list-ol pr-2"></i>
               <span>Orders</span>
-            </button>
+            </Link>
           </li>
         </ul>
       </nav>
