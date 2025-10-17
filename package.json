@@ -1,0 +1,13 @@
+{
+  "name": "fuzemon",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "build": "cd frontend && yarn build",
+    "dev": "cd frontend && yarn dev",
+    "start": "cd frontend && yarn start"
+  }
+}
