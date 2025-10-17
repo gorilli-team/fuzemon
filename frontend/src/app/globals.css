@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark theme CSS variables for easy customization */
+:root {
+  --color-background-primary: #010213;
+  --color-background-secondary: #171835;
+  --color-background-tertiary: #2A2447;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #B0B0C0;
+  --color-accent-purple: #843DFF;
+  --color-accent-orange: #FF4500;
+  --color-accent-blue: #00CED1;
+  --color-accent-yellow: #FFD700;
+  --color-border-subtle: #40405A;
+}
+
+/* Apply dark theme to body */
+body {
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
+  font-family: 'Inter', sans-serif;
+}
+
+.bg-white {
+  background-color: var(--color-background-secondary) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.bg-gray-100 {
+  background-color: var(--color-background-primary) !important;
+}
+
+.bg-gray-50 {
+  background-color: var(--color-background-secondary) !important;
+}
+
+/* Ensure all dark text colors become light on dark backgrounds */
+.text-gray-800,
+.text-gray-700,
+.text-gray-900,
+.text-gray-600 {
+  color: var(--color-text-primary) !important;
+}
+
+/* Secondary text colors for less important content */
+.text-gray-400,
+.text-gray-300 {
+  color: var(--color-text-secondary) !important;
+}
+
+.border-gray-200 {
+  border-color: var(--color-border-subtle) !important;
+}
+
+.border-gray-300 {
+  border-color: var(--color-border-subtle) !important;
+}
+
+/* Active state styling */
+.bg-purple-600,
+.bg-purple-600 {
+  background-color: var(--color-accent-purple) !important;
+}
+
+.text-purple-600,
+.text-purple-600 {
+  color: var(--color-accent-purple) !important;
+}
+
+/* Streak and countdown styling */
+.bg-orange-100,
+.bg-orange-50 {
+  background-color: rgba(255, 69, 0, 0.1) !important;
+}
+
+.text-orange-600,
+.text-orange-700 {
+  color: var(--color-accent-orange) !important;
+}
+
+/* Blue accent for specific elements */
+.text-blue-600 {
+  color: var(--color-accent-blue) !important;
+}
+
+/* Yellow for top ranks */
+.bg-amber-100 {
+  background-color: rgba(255, 215, 0, 0.1) !important;
+}
+
+.text-amber-800 {
+  color: var(--color-accent-yellow) !important;
+}
+
+html, body {
+  height: 100%;
+}
+
+/* Force the sidebar to take full height */
+.min-h-screen {
+  min-height: 100vh;
+}
+
+/* Full height sidebar even when content is short */
+@media (min-width: 1024px) {
+  .sidebar-container {
+    height: 100vh !important;
+    position: sticky;
+    top: 0;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+* {
+  scrollbar-width: none;
+}
+
+* {
+  -ms-overflow-style: none;
+}
