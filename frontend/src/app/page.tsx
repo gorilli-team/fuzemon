@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Sidebar from "./components/Sidebar";
-// import Header from "./components/Header";
+import Header from "./components/Header";
 import Dashboard from "./components/Dashboard";
 
 export default function Home() {
@@ -19,7 +19,7 @@ export default function Home() {
           setSelectedPage={setSelectedPage}
         />
         <div className="flex-1 flex flex-col">
-          {/* <Header /> */}
+          <Header />
           <main className="flex-1 bg-dark-900">{renderContent()}</main>
         </div>
       </div>
