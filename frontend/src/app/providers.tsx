@@ -43,9 +43,6 @@ export function Providers({ children }: { children: ReactNode }) {
             theme: "dark",
             accentColor: "#843DFF",
           },
-          embeddedWallets: {
-            createOnLogin: "users-without-wallets",
-          },
           supportedChains: [fuzemonChain],
           loginMethods: [
             "email",

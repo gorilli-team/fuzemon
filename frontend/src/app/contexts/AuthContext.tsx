@@ -8,7 +8,7 @@ import {
   useCallback,
   ReactNode,
 } from "react";
-import { usePrivy, useLogout, useLogin } from "@privy-io/react-auth";
+import { usePrivy, useLogout, useLogin, type User } from "@privy-io/react-auth";
 
 interface AuthContextType {
   token: string | null;
@@ -16,7 +16,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: () => void;
   logout: () => void;
-  user: any;
+  user: User | null;
   address: string | null;
 }
 

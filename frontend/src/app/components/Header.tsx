@@ -3,8 +3,7 @@ import React from "react";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Header() {
-  const { login, logout, isAuthenticated, isLoading, user, address } =
-    useAuth();
+  const { login, logout, isAuthenticated, isLoading, address } = useAuth();
 
   const formatAddress = (addr: string) => {
     if (!addr) return "";
