@@ -3,12 +3,20 @@ import React, { useState } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Dashboard from "./components/Dashboard";
+import DeployFunds from "./components/deploy-funds/page";
 
 export default function Home() {
   const [selectedPage, setSelectedPage] = useState("Dashboard");
 
   const renderContent = () => {
-    return <Dashboard />;
+    switch (selectedPage) {
+      case "Deploy Funds":
+        return <DeployFunds />;
+      case "Orders":
+        return <Dashboard />; // Placeholder for Orders
+      default:
+        return <Dashboard />;
+    }
   };
 
   return (

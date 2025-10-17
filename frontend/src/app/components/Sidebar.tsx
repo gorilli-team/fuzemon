@@ -30,12 +30,23 @@ export default function Sidebar({
           <li>
             <button
               className={`w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 ${
-                selectedPage === "Dashboard" ? "bg-dark-700 text-white" : ""
+                selectedPage === "Deploy Funds" ? "bg-dark-700 text-white" : ""
               }`}
-              onClick={() => handlePageChange("Dashboard")}
+              onClick={() => handlePageChange("Deploy Funds")}
             >
-              <i className="fa-solid fa-chart-line pr-2"></i>
-              <span>Dashboard</span>
+              <i className="fa-solid fa-money-bill pr-2"></i>
+              <span>Deploy Funds</span>
+            </button>
+          </li>
+          <li>
+            <button
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 ${
+                selectedPage === "Orders" ? "bg-dark-700 text-white" : ""
+              }`}
+              onClick={() => handlePageChange("Orders")}
+            >
+              <i className="fa-solid fa-list-ol pr-2"></i>
+              <span>Orders</span>
             </button>
           </li>
         </ul>
