@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import OpenOrders from "../components/OpenOrders";
 import TokenHoldings from "../components/TokenHoldings";
+import RealSwapComponent from "../components/RealSwapComponent";
 import { Order, SwapState, Token } from "../types/order";
 
 interface NetworkInfo {
@@ -31,7 +32,9 @@ const networks: NetworkInfo[] = [
 ];
 
 export default function DeployFundsPage() {
-  const [activeTab, setActiveTab] = useState<"bridge" | "orders">("orders");
+  const [activeTab, setActiveTab] = useState<"bridge" | "orders" | "real-swap">(
+    "orders"
+  );
   const [fromNetwork, setFromNetwork] = useState<NetworkInfo>(networks[0]);
   const [toNetwork, setToNetwork] = useState<NetworkInfo>(networks[1]);
   const [amount, setAmount] = useState<string>("");
@@ -211,6 +214,16 @@ export default function DeployFundsPage() {
             }`}
           >
             Limit Orders
+          </button>
+          <button
+            onClick={() => setActiveTab("real-swap")}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "real-swap"
+                ? "bg-accent-purple text-white"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            Real Swap
           </button>
           <button
             onClick={() => setActiveTab("bridge")}
@@ -397,6 +410,13 @@ export default function DeployFundsPage() {
               </a>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Real Swap Interface */}
+      {activeTab === "real-swap" && (
+        <div className="space-y-6">
+          <RealSwapComponent />
         </div>
       )}
 
