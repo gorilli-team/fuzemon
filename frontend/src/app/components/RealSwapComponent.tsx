@@ -280,29 +280,41 @@ export default function RealSwapComponent() {
       const hashLock =
         order.order.escrowExtension?.hashLockInfo ||
         "0x0000000000000000000000000000000000000000000000000000000000000000";
-      const orderHash = hashTypedData(
-        order.orderdata as {
-          domain: Record<string, unknown>;
-          types: Record<string, unknown>;
-          primaryType: string;
-          message: Record<string, unknown>;
-        }
-      );
+
+      // Get the order hash that was signed
+      const orderHash = order.order.getOrderHash(swapState.fromChain);
+      console.log("Order hash for signature:", orderHash);
+
       const takerTraits = TakerTraits.default()
         .setExtension(order.order.extension)
         .setAmountMode(AmountMode.maker)
         .setAmountThreshold(order.order.takingAmount)
         .encode();
-      const immutables = order.order
-        .toSrcImmutables(
-          swapState.fromChain,
-          new Address(
-            ChainConfigs[swapState.fromChain].ResolverContractAddress
-          ) as Address,
-          order.order.makingAmount,
-          hashLock
-        )
-        .build();
+
+      // Create immutables using the SAME order instance
+      const immutablesBuilder = order.order.toSrcImmutables(
+        swapState.fromChain,
+        new Address(
+          ChainConfigs[swapState.fromChain].ResolverContractAddress
+        ) as Address,
+        order.order.makingAmount,
+        hashLock
+      );
+
+      // Build the immutables
+      const immutables = immutablesBuilder.build();
+
+      // Verify the hash matches
+      console.log("Immutables orderHash:", immutables.orderHash);
+      console.log("Hashes match:", orderHash === immutables.orderHash);
+
+      // If they don't match, we have a problem with the SDK
+      if (orderHash !== immutables.orderHash) {
+        console.error("CRITICAL: Order hash mismatch!");
+        console.error("Order hash:", orderHash);
+        console.error("Immutables hash:", immutables.orderHash);
+        throw new Error("Order hash mismatch - cannot proceed with swap");
+      }
       const srcSafetyDeposit = BigInt(
         order.order.escrowExtension?.srcSafetyDeposit || 0
       );
@@ -324,7 +336,7 @@ export default function RealSwapComponent() {
             signature: signature,
             immutables: immutables,
             hashLock: hashLock,
-            orderHash: orderHash,
+            orderHash: orderHash, // Use the same orderHash variable
             orderBuild: orderBuild,
             takerTraits: takerTraits,
             srcSafetyDeposit: srcSafetyDeposit,
