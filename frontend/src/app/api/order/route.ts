@@ -47,12 +47,34 @@ export async function POST(request: Request) {
       srcSafetyDeposit
     );
 
+    console.log(`[API] Call data:`, {
+      to: callData.to,
+      data: callData.data,
+      value: callData.value.toString(),
+      dataLength: callData.data.length,
+      dataStartsWith0x: callData.data.startsWith("0x"),
+      dataIsEmpty: callData.data === "" || callData.data === "0x",
+    });
+
     console.log(
       `[API] Sending order fill transaction for user: ${userAddress}`
     );
-    const { txHash: orderFillHash, blockHash: srcDeployBlock } =
-      await srcChainResolver.send(callData);
-    console.log(`[API] Order filled successfully: ${orderFillHash}`);
+
+    try {
+      const { txHash: orderFillHash, blockHash: srcDeployBlock } =
+        await srcChainResolver.send(callData);
+      console.log(`[API] Order filled successfully: ${orderFillHash}`);
+    } catch (error) {
+      console.error(`[API] Transaction failed:`, {
+        error: error instanceof Error ? error.message : "Unknown error",
+        callData: {
+          to: callData.to,
+          data: callData.data,
+          value: callData.value.toString(),
+        },
+      });
+      throw error;
+    }
 
     console.log(
       `[API] Fetching source escrow deployment event for user: ${userAddress}`
