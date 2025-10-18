@@ -58,6 +58,14 @@ export const deploySrcCallData = (
     return BigInt(addr);
   };
 
+  // Debug: Verify taker address
+  console.log("DEBUG: Immutables taker from frontend:", immutables.taker);
+  console.log("DEBUG: Expected resolver address:", srcAddress);
+  console.log(
+    "DEBUG: Taker matches resolver:",
+    immutables.taker === srcAddress
+  );
+
   // Structure immutables as a tuple object with named properties
   const immutablesTuple = {
     orderHash: orderHash, // orderHash (bytes32)
