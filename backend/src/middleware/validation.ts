@@ -62,6 +62,17 @@ export const createOrderSchema = Joi.object({
   }).required(),
   orderHash: Joi.string().optional(),
   secret: Joi.string().optional(),
+  message: Joi.string().optional(),
+  status: Joi.string()
+    .valid(
+      "CREATED",
+      "PENDING_SECRET",
+      "PENDING_WITHDRAW",
+      "COMPLETED",
+      "FAILED"
+    )
+    .optional(),
+  transactions: Joi.object().optional(),
   metadata: Joi.object().optional(),
 });
 

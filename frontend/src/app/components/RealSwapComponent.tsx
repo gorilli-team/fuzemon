@@ -47,13 +47,20 @@ export default function RealSwapComponent() {
   // Get balances and allowances
   const { data: fromTokenBalance } = useBalance({
     address,
-    token: swapState.fromToken.address as `0x${string}`,
+    token:
+      swapState.fromToken.address ===
+      "0x0000000000000000000000000000000000000000"
+        ? undefined
+        : (swapState.fromToken.address as `0x${string}`),
     chainId: swapState.fromChain,
   });
 
   const { data: toTokenBalance } = useBalance({
     address,
-    token: swapState.toToken.address as `0x${string}`,
+    token:
+      swapState.toToken.address === "0x0000000000000000000000000000000000000000"
+        ? undefined
+        : (swapState.toToken.address as `0x${string}`),
     chainId: swapState.toChain,
   });
 
