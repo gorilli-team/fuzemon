@@ -17,7 +17,7 @@ export default function OpenOrders({ userAddress }: OpenOrdersProps) {
     useOrders({
       userAddress,
       autoRefresh: true,
-      refreshInterval: 5000,
+      refreshInterval: 30000,
     });
 
   const handleRefresh = async () => {

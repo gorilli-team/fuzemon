@@ -46,7 +46,7 @@ export function useOrders(options: UseOrdersOptions = {}): UseOrdersReturn {
     page = 1,
     limit = 20,
     autoRefresh = true,
-    refreshInterval = 5000,
+    refreshInterval = 30000,
   } = options;
 
   const [orders, setOrders] = useState<Order[]>([]);
