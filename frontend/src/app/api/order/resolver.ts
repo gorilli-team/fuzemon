@@ -25,21 +25,31 @@ export const deploySrcCallData = (
 ) => {
   // Removed client-side logging to reduce noise
 
-  const { r, yParityAndS: vs } = Signature.from(signature);
+  const sig = Signature.from(signature);
+  const rHex = sig.r;
+  const vsHex = sig.yParityAndS; // Use the pre-calculated vs value
 
-  // Ensure r and vs are proper 32-byte hex strings (bytes32)
-  const rHex =
-    typeof r === "string" ? r : (r as { toString(): string }).toString();
-  const vsHex =
-    typeof vs === "string" ? vs : (vs as { toString(): string }).toString();
+  // Ensure proper formatting
+  const rHexString = rHex.startsWith("0x") ? rHex : "0x" + rHex;
+  const vsHexString = vsHex.startsWith("0x") ? vsHex : "0x" + vsHex;
 
   // Validate that r and vs are proper 32-byte hex strings
-  if (!rHex.startsWith("0x") || rHex.length !== 66) {
-    throw new Error(`Invalid r value: ${rHex} (expected 32-byte hex string)`);
+  if (!rHexString.startsWith("0x") || rHexString.length !== 66) {
+    throw new Error(
+      `Invalid r value: ${rHexString} (expected 32-byte hex string)`
+    );
   }
-  if (!vsHex.startsWith("0x") || vsHex.length !== 66) {
-    throw new Error(`Invalid vs value: ${vsHex} (expected 32-byte hex string)`);
+  if (!vsHexString.startsWith("0x") || vsHexString.length !== 66) {
+    throw new Error(
+      `Invalid vs value: ${vsHexString} (expected 32-byte hex string)`
+    );
   }
+
+  console.log("[DEBUG] Signature components:", {
+    r: rHexString,
+    vs: vsHexString,
+    originalSignature: signature,
+  });
   const { trait } = takerTraits as { args: unknown; trait: unknown };
 
   // Helper function to convert address string to uint256 BigInt
@@ -100,8 +110,8 @@ export const deploySrcCallData = (
         typeof value === "bigint" ? value.toString() : value
       )
     );
-    console.log("DEBUG: rHex:", rHex);
-    console.log("DEBUG: vsHex:", vsHex);
+    console.log("DEBUG: rHex:", rHexString);
+    console.log("DEBUG: vsHex:", vsHexString);
     console.log("DEBUG: amount:", amount);
     console.log("DEBUG: trait:", trait);
 
@@ -110,8 +120,8 @@ export const deploySrcCallData = (
       [
         immutablesTuple,
         orderTuple,
-        rHex,
-        vsHex,
+        rHexString,
+        vsHexString,
         BigInt(amount),
         BigInt(trait as string | number),
         "0x", // args - empty bytes for now
@@ -127,8 +137,8 @@ export const deploySrcCallData = (
       // Include tuple data for contract interface fallback
       immutablesTuple,
       orderTuple,
-      rHex,
-      vsHex,
+      rHex: rHexString,
+      vsHex: vsHexString,
     };
   } catch (error) {
     console.error(`[RESOLVER ERROR] deploySrcCallData encoding failed:`, {
