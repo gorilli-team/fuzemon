@@ -296,8 +296,8 @@ export default function RealSwapComponent() {
         .setAmountThreshold(order.order.takingAmount)
         .encode();
 
-      // Create immutables using the SAME order instance
-      const immutables = order.order
+      // Create immutables using the SDK
+      const sdkImmutables = order.order
         .toSrcImmutables(
           swapState.fromChain,
           new Address(
@@ -308,68 +308,47 @@ export default function RealSwapComponent() {
         )
         .build();
 
-      // CRITICAL: Force set the correct taker address
-      // The SDK seems to be ignoring the taker parameter
-      const resolverAddress =
-        ChainConfigs[swapState.fromChain].ResolverContractAddress;
-
-      // Try direct property assignment first
-      immutables.taker = resolverAddress;
-
-      // If that doesn't work, create a new object with the correct taker
-      const correctedImmutables = {
-        ...immutables,
-        taker: resolverAddress,
+      // Force create a new plain object with the correct taker
+      const immutables = {
+        orderHash: sdkImmutables.orderHash,
+        hashlock: sdkImmutables.hashlock || hashLock.toString(),
+        maker: sdkImmutables.maker,
+        taker: ChainConfigs[swapState.fromChain].ResolverContractAddress, // Force correct taker
+        token: sdkImmutables.token,
+        amount: sdkImmutables.amount,
+        safetyDeposit: sdkImmutables.safetyDeposit,
+        timelocks: sdkImmutables.timelocks,
       };
 
-      console.log("Original immutables taker:", immutables.taker);
-      console.log("Corrected immutables taker:", correctedImmutables.taker);
-      console.log("Should be resolver:", resolverAddress);
+      console.log("Final immutables object:", immutables);
       console.log(
-        "Taker correctly set:",
-        correctedImmutables.taker === resolverAddress
+        "Taker is resolver:",
+        immutables.taker ===
+          ChainConfigs[swapState.fromChain].ResolverContractAddress
       );
-
-      // The SDK might not be setting hashlock properly, so we need to manually set it
-      // Add this after building immutables:
-      if (!correctedImmutables.hashlock && hashLock) {
-        correctedImmutables.hashlock = hashLock.toString();
-      }
 
       // Now verify both match
-      console.log(
-        "Corrected Immutables orderHash:",
-        correctedImmutables.orderHash
-      );
-      console.log("Hashes match:", orderHash === correctedImmutables.orderHash);
-      console.log(
-        "Corrected Immutables hashlock:",
-        correctedImmutables.hashlock
-      );
+      console.log("Immutables orderHash:", immutables.orderHash);
+      console.log("Hashes match:", orderHash === immutables.orderHash);
+      console.log("Immutables hashlock:", immutables.hashlock);
       console.log(
         "Hashlocks match:",
-        hashLock.toString() === correctedImmutables.hashlock
+        hashLock.toString() === immutables.hashlock
       );
 
       // If they don't match, we have a problem with the SDK
-      if (orderHash !== correctedImmutables.orderHash) {
+      if (orderHash !== immutables.orderHash) {
         console.error("CRITICAL: Order hash mismatch!");
         console.error("Order hash:", orderHash);
-        console.error(
-          "Corrected Immutables hash:",
-          correctedImmutables.orderHash
-        );
+        console.error("Immutables hash:", immutables.orderHash);
         throw new Error("Order hash mismatch - cannot proceed with swap");
       }
 
       // Update the validation to compare string values
-      if (hashLock.toString() !== correctedImmutables.hashlock) {
+      if (hashLock.toString() !== immutables.hashlock) {
         console.error("CRITICAL: Hashlock mismatch!");
         console.error("Order hashlock:", hashLock.toString());
-        console.error(
-          "Corrected Immutables hashlock:",
-          correctedImmutables.hashlock
-        );
+        console.error("Immutables hashlock:", immutables.hashlock);
         throw new Error("Hashlock mismatch - cannot proceed with swap");
       }
       const srcSafetyDeposit = BigInt(
@@ -391,7 +370,7 @@ export default function RealSwapComponent() {
             order: order.order,
             swapState: swapState,
             signature: signature,
-            immutables: correctedImmutables,
+            immutables: immutables,
             hashLock: hashLock.toString(), // Convert to string
             orderHash: orderHash, // Use the same orderHash variable
             orderBuild: orderBuild,
