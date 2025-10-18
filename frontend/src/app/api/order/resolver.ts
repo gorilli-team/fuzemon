@@ -83,11 +83,6 @@ export const withdrawCallData = (
 };
 
 // Use SDK types instead of custom interfaces
-type TransactionData = {
-  to: string;
-  data: string;
-  value?: bigint;
-};
 
 class Resolver {
   private iface: Interface;
@@ -124,6 +119,7 @@ class Resolver {
         secret,
         immutables.build(),
       ]),
+      value: BigInt(0),
     };
   }
 
@@ -138,6 +134,7 @@ class Resolver {
         escrow.toString(),
         immutables.build(),
       ]),
+      value: BigInt(0),
     };
   }
 }
