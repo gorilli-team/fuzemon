@@ -91,24 +91,58 @@ export async function POST(request: Request) {
     // Debug smart contract requirements before sending
     console.log("[DEBUG] Checking smart contract requirements...");
 
-    // Check token approvals
+    // Check and handle token approvals
     try {
       const ERC20_ABI = [
         "function allowance(address owner, address spender) view returns (uint256)",
         "function balanceOf(address account) view returns (uint256)",
+        "function approve(address spender, uint256 amount) returns (bool)",
       ];
       const tokenContract = new Contract(
         immutables.token,
         ERC20_ABI,
-        srcChainResolver.provider
+        srcChainResolver.signer // Use signer for transactions
       );
+
       const allowance = await tokenContract.allowance(userAddress, callData.to);
       const tokenBalance = await tokenContract.balanceOf(userAddress);
       console.log("[DEBUG] Token allowance:", allowance.toString());
       console.log("[DEBUG] Token balance:", tokenBalance.toString());
       console.log("[DEBUG] Required amount:", fillAmount.toString());
+
+      // Check if approval is needed
+      if (allowance < fillAmount) {
+        console.log(
+          "[DEBUG] Token allowance insufficient, approving token spend..."
+        );
+        console.log(
+          "[DEBUG] Approving",
+          fillAmount.toString(),
+          "tokens for",
+          callData.to
+        );
+
+        const approveTx = await tokenContract.approve(callData.to, fillAmount);
+        console.log("[DEBUG] Approval transaction sent:", approveTx.hash);
+
+        const approveReceipt = await approveTx.wait();
+        console.log(
+          "[DEBUG] Token approval complete, gas used:",
+          approveReceipt.gasUsed.toString()
+        );
+
+        // Verify the approval went through
+        const newAllowance = await tokenContract.allowance(
+          userAddress,
+          callData.to
+        );
+        console.log("[DEBUG] New token allowance:", newAllowance.toString());
+      } else {
+        console.log("[DEBUG] Token allowance sufficient, no approval needed");
+      }
     } catch (tokenError) {
-      console.log("[DEBUG] Could not check token data:", tokenError);
+      console.log("[DEBUG] Could not handle token approval:", tokenError);
+      throw tokenError; // Re-throw to prevent proceeding without approval
     }
 
     // Check ETH balance
