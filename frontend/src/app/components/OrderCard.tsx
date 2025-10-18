@@ -121,7 +121,7 @@ export default function OrderCard({ order }: OrderCardProps) {
 
   return (
     <div
-      className={`rounded-lg p-3 border transition-all duration-200 hover:shadow-md ${getStatusColor(
+      className={`rounded-lg p-3 bg-dark-800 border transition-all duration-200 hover:shadow-md ${getStatusColor(
         order.status
       )}`}
     >

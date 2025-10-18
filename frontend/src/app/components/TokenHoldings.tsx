@@ -170,8 +170,8 @@ export default function TokenHoldings() {
 
     if (!ethBalance || !usdcBalance) return "0.00";
 
-    // Mock ETH price of $2000 for demo
-    const ethValue = parseFloat(ethBalance.balance) * 2000;
+    // Mock ETH price of $3.879,85 for demo
+    const ethValue = parseFloat(ethBalance.balance) * 3879.95;
     const usdcValue = parseFloat(usdcBalance.balance);
 
     return (ethValue + usdcValue).toFixed(2);
