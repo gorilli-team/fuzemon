@@ -88,13 +88,56 @@ export async function POST(request: Request) {
 
     console.log("[DEBUG] Transaction request:", txRequest);
 
+    // Debug smart contract requirements before sending
+    console.log("[DEBUG] Checking smart contract requirements...");
+
+    // Check token approvals
+    try {
+      const ERC20_ABI = [
+        "function allowance(address owner, address spender) view returns (uint256)",
+        "function balanceOf(address account) view returns (uint256)",
+      ];
+      const tokenContract = new Contract(
+        immutables.token,
+        ERC20_ABI,
+        srcChainResolver.provider
+      );
+      const allowance = await tokenContract.allowance(userAddress, callData.to);
+      const tokenBalance = await tokenContract.balanceOf(userAddress);
+      console.log("[DEBUG] Token allowance:", allowance.toString());
+      console.log("[DEBUG] Token balance:", tokenBalance.toString());
+      console.log("[DEBUG] Required amount:", fillAmount.toString());
+    } catch (tokenError) {
+      console.log("[DEBUG] Could not check token data:", tokenError);
+    }
+
+    // Check ETH balance
+    try {
+      const ethBalance = await srcChainResolver.provider.getBalance(
+        userAddress
+      );
+      console.log("[DEBUG] ETH balance:", ethBalance.toString());
+      console.log("[DEBUG] Required ETH value:", callData.value.toString());
+    } catch (balanceError) {
+      console.log("[DEBUG] Could not check ETH balance:", balanceError);
+    }
+
     let orderFillHash: string;
     let srcDeployBlock: string;
 
     try {
       // ACTUALLY CALL sendTransaction - this is what was missing
       console.log("[DEBUG] Calling sendTransaction...");
-      const tx = await srcChainResolver.signer.sendTransaction(txRequest);
+
+      // Try with explicit gas limit to bypass estimation issues
+      const txRequestWithGas = {
+        ...txRequest,
+        gasLimit: 500000, // Set explicit gas limit
+      };
+
+      const tx = await srcChainResolver.signer.sendTransaction(
+        txRequestWithGas
+      );
       console.log("[DEBUG] Transaction sent successfully:", tx.hash);
 
       const receipt = await tx.wait();
@@ -120,6 +163,20 @@ export async function POST(request: Request) {
         console.log(
           "[DEBUG] Contract interface approach - calling deploySrc..."
         );
+
+        // Debug the parameters being passed to the contract
+        console.log("[DEBUG] Contract call parameters:", {
+          immutablesTuple: callData.immutablesTuple,
+          orderTuple: callData.orderTuple,
+          rHex: callData.rHex,
+          vsHex: callData.vsHex,
+          fillAmount: fillAmount.toString(),
+          trait: BigInt(
+            (takerTraits as { trait: string | number }).trait
+          ).toString(),
+          value: callData.value.toString(),
+        });
+
         const tx = await contract.deploySrc(
           callData.immutablesTuple,
           callData.orderTuple,
@@ -128,7 +185,10 @@ export async function POST(request: Request) {
           fillAmount,
           BigInt((takerTraits as { trait: string | number }).trait),
           "0x", // args - empty bytes
-          { value: callData.value }
+          {
+            value: callData.value,
+            gasLimit: 500000, // Set explicit gas limit for contract call too
+          }
         );
 
         const receipt = await tx.wait();
