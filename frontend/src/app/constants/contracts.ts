@@ -51,6 +51,12 @@ export const ChainConfigs = {
       "0x7490329e69ab8e298a32dc59493034e4d02a5ccf",
     ChainName: "Sepolia",
     RpcUrl: "https://ethereum-sepolia-rpc.publicnode.com",
+    // Alternative RPC endpoints for testing
+    AlternativeRpcUrls: [
+      "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", // Infura
+      "https://eth-sepolia.g.alchemy.com/v2/demo", // Alchemy
+      "https://rpc.sepolia.org", // Sepolia Foundation
+    ],
     ResolverPrivateKey: process.env.SEPOLIA_USER_PRIVATE_KEY,
     SafetyDeposit: parseEther("0.0001"), // Reduced from 0.001 to 0.0001 ETH
   },
@@ -87,36 +93,102 @@ export const ChainConfigs = {
 // Store the authorized user address for each chain
 const authorizedUsers = new Map<number, string>();
 
-export const getChainResolver = (chainId: number, userAddress?: string) => {
+// Function to test RPC endpoint connectivity
+const testRpcEndpoint = async (rpcUrl: string): Promise<boolean> => {
+  try {
+    const testProvider = new JsonRpcProvider(rpcUrl);
+    testProvider._getConnection().timeout = 10000; // 10 seconds timeout for testing
+    await testProvider.getBlockNumber();
+    return true;
+  } catch (error) {
+    console.log(
+      `[RPC TEST] Failed to connect to ${rpcUrl}:`,
+      error instanceof Error ? error.message : "Unknown error"
+    );
+    return false;
+  }
+};
+
+// Function to find working RPC endpoint
+const findWorkingRpcEndpoint = async (
+  chainConfig: (typeof ChainConfigs)[number]
+): Promise<string> => {
+  // Test primary RPC first
+  console.log(`[RPC TEST] Testing primary RPC: ${chainConfig.RpcUrl}`);
+  if (await testRpcEndpoint(chainConfig.RpcUrl)) {
+    console.log(`[RPC TEST] Primary RPC is working: ${chainConfig.RpcUrl}`);
+    return chainConfig.RpcUrl;
+  }
+
+  // Test alternative RPCs if available
+  if (chainConfig.AlternativeRpcUrls) {
+    for (const altRpc of chainConfig.AlternativeRpcUrls) {
+      console.log(`[RPC TEST] Testing alternative RPC: ${altRpc}`);
+      if (await testRpcEndpoint(altRpc)) {
+        console.log(`[RPC TEST] Alternative RPC is working: ${altRpc}`);
+        return altRpc;
+      }
+    }
+  }
+
+  // If all fail, return the primary RPC (will likely fail but gives better error message)
+  console.log(
+    `[RPC TEST] All RPC endpoints failed, using primary: ${chainConfig.RpcUrl}`
+  );
+  return chainConfig.RpcUrl;
+};
+
+export const getChainResolver = async (
+  chainId: number,
+  userAddress?: string
+) => {
   const chainConfig = ChainConfigs[chainId];
   if (!chainConfig?.ResolverPrivateKey) {
     throw new Error(`No resolver private key found for chain ${chainId}`);
   }
 
-  const provider = new JsonRpcProvider(chainConfig.RpcUrl);
+  // Find working RPC endpoint
+  const workingRpcUrl = await findWorkingRpcEndpoint(chainConfig);
+  console.log(`[RESOLVER DEBUG] Using RPC: ${workingRpcUrl}`);
+
+  const provider = new JsonRpcProvider(workingRpcUrl);
   // Set timeout for the provider
   provider._getConnection().timeout = 30000; // 30 seconds timeout
 
   const wallet = new Wallet(chainConfig.ResolverPrivateKey, provider);
 
-  // If this is the first time or userAddress is provided, validate and store the authorized user
+  // Get the actual address from the private key
+  const privateKeyOwnerAddress = await wallet.getAddress();
+
+  console.log(`[RESOLVER DEBUG] Chain ${chainId} wallet details:`, {
+    privateKeyOwnerAddress,
+    userAddress,
+    chainId,
+    rpcUrl: chainConfig.RpcUrl,
+  });
+
+  // If userAddress is provided, validate it matches the private key owner
   if (userAddress) {
-    // Validate that the userAddress matches the private key owner
-    wallet.getAddress().then((privateKeyOwnerAddress) => {
-      if (privateKeyOwnerAddress.toLowerCase() !== userAddress.toLowerCase()) {
-        throw new Error(
-          `Unauthorized: User ${userAddress} does not own the private key. Expected: ${privateKeyOwnerAddress}`
-        );
-      }
-      // Store the authorized user for this chain
-      authorizedUsers.set(chainId, userAddress.toLowerCase());
-    });
+    if (privateKeyOwnerAddress.toLowerCase() !== userAddress.toLowerCase()) {
+      throw new Error(
+        `Unauthorized: User ${userAddress} does not own the private key. Expected: ${privateKeyOwnerAddress}, Got: ${userAddress}`
+      );
+    }
+    // Store the authorized user for this chain
+    authorizedUsers.set(chainId, userAddress.toLowerCase());
+    console.log(
+      `[RESOLVER DEBUG] User ${userAddress} authorized for chain ${chainId}`
+    );
   } else {
     // Check if we already have an authorized user for this chain
     const existingUser = authorizedUsers.get(chainId);
     if (existingUser) {
       console.log(
-        `Using authorized user for chain ${chainId}: ${existingUser}`
+        `[RESOLVER DEBUG] Using authorized user for chain ${chainId}: ${existingUser}`
+      );
+    } else {
+      console.log(
+        `[RESOLVER DEBUG] No user address provided, using dev wallet: ${privateKeyOwnerAddress}`
       );
     }
   }

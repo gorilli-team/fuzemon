@@ -111,6 +111,11 @@ export const deploySrcCallData = (
       to: srcAddress,
       data: encodedData,
       value: srcSafetyDeposit,
+      // Include tuple data for contract interface fallback
+      immutablesTuple,
+      orderTuple,
+      rHex,
+      vsHex,
     };
   } catch (error) {
     console.error(`[RESOLVER ERROR] deploySrcCallData encoding failed:`, {

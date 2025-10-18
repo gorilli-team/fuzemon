@@ -1,5 +1,6 @@
 import { Address, Immutables } from "@1inch/cross-chain-sdk";
 import { NextResponse } from "next/server";
+import { Contract } from "ethers";
 import {
   getBlockExplorerLink,
   getTransactionLink,
@@ -7,6 +8,7 @@ import {
 import { ChainConfigs, getChainResolver } from "../../constants/contracts";
 import { getSrcDeployEvent } from "./escrow";
 import { deploySrcCallData, Resolver } from "./resolver";
+import ResolverABI from "./abi/Resolver.json";
 
 export async function POST(request: Request) {
   try {
@@ -31,7 +33,16 @@ export async function POST(request: Request) {
     );
 
     // The order data should contain the necessary properties
-    const srcChainResolver = getChainResolver(swapState.fromChain, userAddress);
+    const srcChainResolver = await getChainResolver(
+      swapState.fromChain,
+      userAddress
+    );
+
+    // Log the actual wallet address being used
+    const walletAddress = await srcChainResolver.getAddress();
+    console.log(
+      `[API] Using wallet address: ${walletAddress} for user: ${userAddress}`
+    );
 
     const fillAmount = order.inner.inner.makingAmount;
 
@@ -60,10 +71,55 @@ export async function POST(request: Request) {
       `[API] Sending order fill transaction for user: ${userAddress}`
     );
 
+    // Debug the transaction before sending
+    console.log("[DEBUG] About to send transaction:", {
+      to: callData.to,
+      dataLength: callData.data.length,
+      valueInWei: callData.value.toString(),
+      from: await srcChainResolver.getAddress(),
+    });
+
+    // Try sending with explicit properties
+    const txRequest = {
+      to: callData.to,
+      data: callData.data,
+      value: callData.value,
+    };
+
+    console.log("[DEBUG] Transaction request:", txRequest);
+
+    let orderFillHash: string;
+    let srcDeployBlock: string;
+
     try {
-      const { txHash: orderFillHash, blockHash: srcDeployBlock } =
-        await srcChainResolver.send(callData);
-      console.log(`[API] Order filled successfully: ${orderFillHash}`);
+      // Try using contract interface directly (simpler approach)
+      console.log("[DEBUG] Attempting contract interface approach...");
+
+      const contract = new Contract(callData.to, ResolverABI, srcChainResolver);
+
+      console.log("[DEBUG] Contract interface approach - calling deploySrc...");
+
+      const tx = await contract.deploySrc(
+        callData.immutablesTuple,
+        callData.orderTuple,
+        callData.rHex,
+        callData.vsHex,
+        fillAmount,
+        BigInt((takerTraits as { trait: string | number }).trait),
+        "0x", // args - empty bytes
+        { value: callData.value }
+      );
+
+      const receipt = await tx.wait();
+      if (receipt) {
+        orderFillHash = receipt.hash;
+        srcDeployBlock = receipt.blockHash;
+        console.log(
+          `[API] Order filled successfully via contract interface: ${orderFillHash}`
+        );
+      } else {
+        throw new Error("Transaction receipt is null");
+      }
     } catch (error) {
       console.error(`[API] Transaction failed:`, {
         error: error instanceof Error ? error.message : "Unknown error",
@@ -91,11 +147,14 @@ export async function POST(request: Request) {
       .withTaker(new Address(resolverContract.dstAddress));
 
     console.log(`[API] Deploying destination escrow for user: ${userAddress}`);
-    const dstChainResolver = getChainResolver(swapState.toChain, userAddress);
-    const { txHash: dstDepositHash, blockTimestamp: dstDeployedAt } =
-      await dstChainResolver.send(
-        resolverContract.deployDst(dstImmutables as Immutables)
-      );
+    const dstChainResolver = await getChainResolver(
+      swapState.toChain,
+      userAddress
+    );
+    const dstCallData = resolverContract.deployDst(dstImmutables as Immutables);
+    const dstResult = await dstChainResolver.send(dstCallData);
+    const dstDepositHash = dstResult.txHash;
+    const dstDeployedAt = dstResult.blockTimestamp;
     console.log(
       `[API] Destination escrow deployed: ${dstDepositHash} for user: ${userAddress}`
     );
