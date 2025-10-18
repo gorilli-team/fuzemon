@@ -1,6 +1,6 @@
 import { createConfig, http } from "wagmi";
 import { sepolia, baseSepolia } from "wagmi/chains";
-import { injected, metaMask, walletConnect } from "wagmi/connectors";
+import { injected, metaMask } from "wagmi/connectors";
 
 // Define custom Monad testnet chain
 export const monadTestnet = {
@@ -30,13 +30,7 @@ export const monadTestnet = {
 
 export const config = createConfig({
   chains: [sepolia, baseSepolia, monadTestnet],
-  connectors: [
-    injected(),
-    metaMask(),
-    walletConnect({
-      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "",
-    }),
-  ],
+  connectors: [injected(), metaMask()],
   transports: {
     [sepolia.id]: http(),
     [baseSepolia.id]: http(),
