@@ -37,20 +37,18 @@ export const ChainIds = {
   Sepolia: 11155111,
   BaseSepolia: 84532,
   MonadTestnet: 10143,
-  EtherlinkTestnet: 128123,
 };
 
 export const ChainConfigs = {
   [ChainIds.Sepolia]: {
-    LOP: "0x32a209c3736c5bd52e395eabc86b9bca4f602985",
+    LOP: "0x111111125421cA6dc452d289314280a0f8842A65",
     EscrowFactory: "0x61a32a9263c6ff568c66799a94f8fe09c1db7a66",
-    ResolverContractAddress: "0xe002e8e986fd4bbff58b49423c7f7e0e0e92cc59",
+    ResolverContractAddress: "0xb763BA9a8D756E5698Afc2EAC33C7b8f3A46A586",
     BLT: "0x0BF8E91b08b242cD7380bC92385C90c8270b37f0",
     EscrowSrcImplementationAddress:
       "0xa17ddb01f03a42e0070a0e25099cf3d27b705fff",
     EscrowDstImplementationAddress:
       "0x7490329e69ab8e298a32dc59493034e4d02a5ccf",
-    TrueERC20: "0x6dFe5DA3C989aB142CfB16a8FfA2B0e640b1d821",
     ChainName: "Sepolia",
     RpcUrl: "https://ethereum-sepolia-rpc.publicnode.com",
     ResolverPrivateKey: process.env.SEPOLIA_USER_PRIVATE_KEY,
@@ -65,37 +63,20 @@ export const ChainConfigs = {
       "0xe55061a78bf30e7f38410b90a6a167d5621cc068",
     EscrowDstImplementationAddress:
       "0x0418b6e80a602474fbfadc3a2594413fe68496bb",
-    TrueERC20: "0x8bD9f7C82eBF9D9C830a76bAcb0E99A52163B304",
     ChainName: "BaseSepolia",
     RpcUrl: "https://base-sepolia-rpc.publicnode.com",
     ResolverPrivateKey: process.env.BASE_SEPOLIA_USER_PRIVATE_KEY,
     SafetyDeposit: parseEther("0.001"),
   },
-  [ChainIds.EtherlinkTestnet]: {
-    LOP: "0x942DFf5Af350fd0816Bd03C91729633C293dB5dA",
-    EscrowFactory: "0x54B6335e1daEed822d2f06Bf5D5c97b7423e319d",
-    ResolverContractAddress: "0xa7c76ECE64a9c7ea863bb324a9451f903e1D0996",
-    BLT: "0xb84b2c6c0d554263Eab9f56DEeA8523347270A11",
-    EscrowSrcImplementationAddress:
-      "0xdb2c3b4de9e6943da03afaff9dacaee861eb7f39",
-    EscrowDstImplementationAddress:
-      "0xa16d7bc6b95a3ab7b2a2514cd58ddc18732aa74a",
-    TrueERC20: "0x8382515C25930D298e3B64Eb397005f9Ae71fc0C",
-    ChainName: "EtherlinkTestnet",
-    RpcUrl: "https://rpc.ankr.com/etherlink_testnet",
-    ResolverPrivateKey: process.env.ETHERLINK_TESTNET_USER_PRIVATE_KEY,
-    SafetyDeposit: parseEther("0.001"),
-  },
   [ChainIds.MonadTestnet]: {
-    LOP: "0xFCf9F11666Adb060D03Bb873954673f90914bAdE",
-    EscrowFactory: "0xb84b2c6c0d554263Eab9f56DEeA8523347270A11",
-    ResolverContractAddress: "0x0642d9dE03A087588b39dBc844edE137e81f504E",
+    LOP: "0xCAEa711010565904d3427b74794e3F36c191a6e7",
+    EscrowFactory: "0x65c169Cef9904499788FE61ea708EB6F99C34Ff6",
+    ResolverContractAddress: "0xCE285fAA5817A0fb8701Faf49a8B395432933137",
     BLT: "0x60c13fAcC3d2363fa4c1D4c8A0456a4FeBc98903",
     EscrowSrcImplementationAddress:
       "0xb067a3695e316f4d6f42ef047cac941a3f0298f1",
     EscrowDstImplementationAddress:
       "0x4a2d6954c17ff9be4af9b0c9a74e2d0ff4cf128d",
-    TrueERC20: "0xE4F87948Efd25651CA20d8b0d750d94612f3FCB7",
     ChainName: "MonadTestnet",
     RpcUrl: "https://rpc.ankr.com/monad_testnet",
     ResolverPrivateKey: process.env.MONAD_TESTNET_USER_PRIVATE_KEY,
