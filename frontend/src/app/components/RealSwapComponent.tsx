@@ -17,7 +17,6 @@ import { ChainConfigs } from "../constants/contracts";
 import { LOP_ADDRESSES, TOKENS } from "../constants/tokens";
 import { createOrder as createOrderLogic } from "../logic/swap";
 import { type Order, type SwapState } from "../types/order";
-import { baseSepolia } from "wagmi/chains";
 import { monadTestnet } from "../config/wagmi";
 import { apiService } from "../services/api";
 
@@ -28,10 +27,10 @@ export default function RealSwapComponent() {
   const { signTypedDataAsync } = useSignTypedData();
 
   const [swapState, setSwapState] = useState<SwapState>({
-    fromChain: baseSepolia.id, // Base Sepolia
-    toChain: monadTestnet.id, // Monad Testnet
-    fromToken: TOKENS[baseSepolia.id][0],
-    toToken: TOKENS[monadTestnet.id][0],
+    fromChain: 11155111, // ETH Sepolia - FIXED
+    toChain: monadTestnet.id, // Monad Testnet - FIXED
+    fromToken: TOKENS[11155111][1], // USDC on ETH Sepolia - FIXED
+    toToken: TOKENS[monadTestnet.id][1], // USDC on Monad Testnet - FIXED
     fromAmount: "",
     toAmount: "",
     userAddress: address,
@@ -39,10 +38,12 @@ export default function RealSwapComponent() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  // Disabled for USDC to USDC only swaps
   const [showFromTokenList, setShowFromTokenList] = useState(false);
   const [showToTokenList, setShowToTokenList] = useState(false);
   const [showFromChainList, setShowFromChainList] = useState(false);
   const [showToChainList, setShowToChainList] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   // Get balances and allowances
   const { data: fromTokenBalance } = useBalance({
@@ -52,7 +53,7 @@ export default function RealSwapComponent() {
       "0x0000000000000000000000000000000000000000"
         ? undefined
         : (swapState.fromToken.address as `0x${string}`),
-    chainId: swapState.fromChain as 84532 | 10143,
+    chainId: swapState.fromChain as 84532 | 11155111 | 10143,
   });
 
   const { data: toTokenBalance } = useBalance({
@@ -61,7 +62,15 @@ export default function RealSwapComponent() {
       swapState.toToken.address === "0x0000000000000000000000000000000000000000"
         ? undefined
         : (swapState.toToken.address as `0x${string}`),
-    chainId: swapState.toChain as 84532 | 10143,
+    chainId: swapState.toChain as 84532 | 11155111 | 10143,
+  });
+
+  // Debug logging for balance fetching
+  console.log("🔍 Balance Debug:", {
+    toTokenAddress: swapState.toToken.address,
+    toChain: swapState.toChain,
+    toTokenBalance: toTokenBalance,
+    userAddress: address,
   });
 
   const { data: allowance } = useReadContract({
@@ -80,7 +89,7 @@ export default function RealSwapComponent() {
     ],
     functionName: "allowance",
     args: [address!, LOP_ADDRESSES[swapState.fromChain] as `0x${string}`],
-    chainId: swapState.fromChain as 84532 | 10143,
+    chainId: swapState.fromChain as 84532 | 11155111 | 10143,
   });
 
   const needsApproval = () => {
@@ -166,7 +175,7 @@ export default function RealSwapComponent() {
           LOP_ADDRESSES[swapState.fromChain] as `0x${string}`,
           requiredAmount,
         ],
-        chainId: swapState.fromChain as 84532 | 10143,
+        chainId: swapState.fromChain as 84532 | 11155111 | 10143,
       });
 
       console.log("✅ Spending cap approved successfully");
@@ -188,16 +197,13 @@ export default function RealSwapComponent() {
     }
   }, [swapState.fromAmount]);
 
+  // DISABLED: Only USDC to USDC swaps allowed (Base Sepolia → Monad Testnet)
   const handleSwapDirection = () => {
-    setSwapState((prev) => ({
-      ...prev,
-      fromChain: prev.toChain,
-      toChain: prev.fromChain,
-      fromToken: prev.toToken,
-      toToken: prev.fromToken,
-      fromAmount: prev.toAmount,
-      toAmount: prev.fromAmount,
-    }));
+    // Direction swapping is disabled for USDC to USDC only swaps
+    console.log(
+      "⚠️ Swap direction is fixed: USDC (Base Sepolia) → USDC (Monad Testnet)"
+    );
+    return;
   };
 
   const handleSwap = async () => {
@@ -242,7 +248,9 @@ export default function RealSwapComponent() {
 
     try {
       console.log("🔄 Switching to source chain...");
-      await switchChain({ chainId: swapState.fromChain as 84532 | 10143 });
+      await switchChain({
+        chainId: swapState.fromChain as 84532 | 11155111 | 10143,
+      });
       console.log("Switched to source chain");
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -520,9 +528,19 @@ export default function RealSwapComponent() {
   return (
     <div className="w-md mx-auto bg-dark-800 rounded-2xl shadow-xl p-6 border border-dark-600">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-white">
-          Real Cross-Chain Exchange
-        </h2>
+        <div>
+          <h2 className="text-2xl font-bold text-white">
+            USDC Cross-Chain Exchange
+          </h2>
+          <p className="text-sm text-gray-400 mt-1">
+            USDC (ETH Sepolia) → USDC (Monad Testnet)
+          </p>
+          <div className="mt-2 px-3 py-1 bg-blue-900/30 border border-blue-500/30 rounded-lg inline-block">
+            <span className="text-blue-300 text-xs">
+              🔒 Fixed Configuration
+            </span>
+          </div>
+        </div>
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
           <span className="text-sm text-gray-400">
@@ -539,6 +557,24 @@ export default function RealSwapComponent() {
             <span className="text-sm text-gray-400">
               Balance: {formatBalance(fromTokenBalance)}
             </span>
+            <div className="flex items-center space-x-2 mt-1">
+              <span className="text-xs text-gray-500">
+                {swapState.fromToken.address}
+              </span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(swapState.fromToken.address);
+                  setCopiedAddress(swapState.fromToken.address);
+                  setTimeout(() => setCopiedAddress(null), 2000);
+                }}
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+                title="Copy contract address"
+              >
+                {copiedAddress === swapState.fromToken.address
+                  ? "Copied!"
+                  : "Copy"}
+              </button>
+            </div>
             {swapState.fromAmount &&
               !validateAmount(swapState.fromAmount, fromTokenBalance) && (
                 <span className="text-xs text-red-400 mt-1">
@@ -655,11 +691,13 @@ export default function RealSwapComponent() {
         </div>
       </div>
 
-      {/* Swap Direction Button */}
+      {/* Swap Direction Button - DISABLED */}
       <div className="flex justify-center mb-4">
         <button
           onClick={handleSwapDirection}
-          className="p-2 bg-dark-700 rounded-full hover:bg-dark-600 transition-colors"
+          disabled={true}
+          className="p-2 bg-dark-700 rounded-full opacity-50 cursor-not-allowed"
+          title="Swap direction is fixed for USDC to USDC swaps"
         >
           <ArrowsUpDownIcon className="w-5 h-5 text-gray-400" />
         </button>
@@ -669,9 +707,37 @@ export default function RealSwapComponent() {
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <label className="text-sm font-medium text-gray-300">To</label>
-          <span className="text-sm text-gray-400">
-            Balance: {formatBalance(toTokenBalance)}
-          </span>
+          <div className="flex flex-col items-end">
+            <span className="text-sm text-gray-400">
+              Balance: {formatBalance(toTokenBalance)}
+            </span>
+            <div className="flex items-center space-x-2 mt-1">
+              <span className="text-xs text-gray-500">
+                {swapState.toToken.address}
+              </span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(swapState.toToken.address);
+                  setCopiedAddress(swapState.toToken.address);
+                  setTimeout(() => setCopiedAddress(null), 2000);
+                }}
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+                title="Copy contract address"
+              >
+                {copiedAddress === swapState.toToken.address
+                  ? "Copied!"
+                  : "Copy"}
+              </button>
+            </div>
+            {!toTokenBalance && (
+              <button
+                onClick={() => switchChain({ chainId: 10143 })}
+                className="text-xs text-blue-400 hover:text-blue-300 mt-1 underline"
+              >
+                Switch to Monad Testnet to see balance
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="bg-dark-700 rounded-xl p-4 border border-dark-500">
@@ -680,7 +746,9 @@ export default function RealSwapComponent() {
             <div className="relative">
               <button
                 onClick={() => setShowToChainList(!showToChainList)}
-                className="flex items-center space-x-2 bg-dark-600 rounded-lg px-3 py-2 border border-dark-500 hover:bg-dark-500 transition-colors"
+                disabled={true}
+                className="flex items-center space-x-2 bg-dark-600 rounded-lg px-3 py-2 border border-dark-500 opacity-50 cursor-not-allowed"
+                title="Chain selection is fixed for USDC to USDC swaps"
               >
                 <img
                   src={getChainLogo(swapState.toChain)}
@@ -724,7 +792,9 @@ export default function RealSwapComponent() {
             <div className="relative">
               <button
                 onClick={() => setShowToTokenList(!showToTokenList)}
-                className="flex items-center space-x-2 bg-dark-600 rounded-lg px-3 py-2 border border-dark-500 hover:bg-dark-500 transition-colors"
+                disabled={true}
+                className="flex items-center space-x-2 bg-dark-600 rounded-lg px-3 py-2 border border-dark-500 opacity-50 cursor-not-allowed"
+                title="Token selection is fixed for USDC to USDC swaps"
               >
                 <img
                   src={swapState.toToken.logo}

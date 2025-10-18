@@ -16,22 +16,38 @@ export const deploySrcCallData = (
   orderBuild: unknown,
   srcSafetyDeposit: bigint
 ) => {
+  console.log("deploySrcCallData called with:", {
+    srcAddress,
+    signature: signature?.slice(0, 20) + "...",
+    immutables: Object.keys(immutables),
+    takerTraits,
+    amount: amount.toString(),
+    orderHash,
+    orderBuild: typeof orderBuild,
+    srcSafetyDeposit: srcSafetyDeposit.toString(),
+  });
+
   const { r, yParityAndS: vs } = Signature.from(signature);
   const { args, trait } = takerTraits as { args: unknown; trait: unknown };
   immutables.orderHash = orderHash;
-  return {
-    to: srcAddress,
-    data: new Interface(RESOLVER_ABI).encodeFunctionData("deploySrc", [
-      immutables,
-      orderBuild,
-      r,
-      vs,
-      amount,
-      trait,
-      args,
-    ]),
-    value: srcSafetyDeposit,
-  };
+
+  try {
+    const encodedData = new Interface(RESOLVER_ABI).encodeFunctionData(
+      "deploySrc",
+      [immutables, orderBuild, r, vs, amount, trait, args]
+    );
+
+    console.log("✅ Encoded data:", encodedData?.slice(0, 20) + "...");
+
+    return {
+      to: srcAddress,
+      data: encodedData,
+      value: srcSafetyDeposit,
+    };
+  } catch (error) {
+    console.error("❌ Error encoding function data:", error);
+    throw error;
+  }
 };
 
 export const deployDstCallData = (

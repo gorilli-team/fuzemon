@@ -34,20 +34,38 @@ export async function POST(request: Request) {
   const srcChainResolver = getChainResolver(swapState.fromChain, userAddress);
 
   const fillAmount = order.inner.inner.makingAmount;
+
+  console.log("🔍 About to call deploySrcCallData with:", {
+    resolverAddress: ChainConfigs[swapState.fromChain].ResolverContractAddress,
+    signature: signature?.slice(0, 20) + "...",
+    immutables: Object.keys(immutables),
+    takerTraits,
+    fillAmount: fillAmount.toString(),
+    orderHash,
+    orderBuild: typeof orderBuild,
+    srcSafetyDeposit: srcSafetyDeposit.toString(),
+  });
+
+  const callData = deploySrcCallData(
+    ChainConfigs[swapState.fromChain].ResolverContractAddress,
+    signature,
+    immutables,
+    takerTraits,
+    fillAmount,
+    orderHash,
+    hashLock,
+    orderBuild,
+    srcSafetyDeposit
+  );
+
+  console.log("📤 Sending transaction with data:", {
+    to: callData.to,
+    data: callData.data?.slice(0, 20) + "...",
+    value: callData.value?.toString(),
+  });
+
   const { txHash: orderFillHash, blockHash: srcDeployBlock } =
-    await srcChainResolver.send(
-      deploySrcCallData(
-        ChainConfigs[swapState.fromChain].ResolverContractAddress,
-        signature,
-        immutables,
-        takerTraits,
-        fillAmount,
-        orderHash,
-        hashLock,
-        orderBuild,
-        srcSafetyDeposit
-      )
-    );
+    await srcChainResolver.send(callData);
   console.log("✅ Order filled successfully:", orderFillHash);
 
   console.log("🔍 Fetching source escrow deployment event...");

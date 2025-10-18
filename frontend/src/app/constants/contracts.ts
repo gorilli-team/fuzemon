@@ -54,7 +54,7 @@ export const ChainConfigs = {
     ChainName: "Sepolia",
     RpcUrl: "https://ethereum-sepolia-rpc.publicnode.com",
     ResolverPrivateKey: process.env.SEPOLIA_USER_PRIVATE_KEY,
-    SafetyDeposit: parseEther("0.001"),
+    SafetyDeposit: parseEther("0.0001"), // Reduced from 0.001 to 0.0001 ETH
   },
   [ChainIds.BaseSepolia]: {
     LOP: "0xe30f9abbadc1eb84b41d41035b2a2c7d0bd5f9b2",
