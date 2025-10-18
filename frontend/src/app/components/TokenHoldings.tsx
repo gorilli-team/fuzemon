@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
+import { usePrivy } from "@privy-io/react-auth";
+import Image from "next/image";
 
 interface TokenInfo {
   symbol: string;
@@ -35,55 +37,103 @@ interface TokenBalance {
 }
 
 export default function TokenHoldings() {
+  const { ready, authenticated, user } = usePrivy();
   const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
 
   useEffect(() => {
-    // Check if wallet is connected
-    if (window.ethereum) {
-      window.ethereum
-        .request({ method: "eth_accounts" })
-        .then((accounts: string[]) => {
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-            fetchBalances(accounts[0]);
-          } else {
-            setIsLoading(false);
-          }
-        });
-    } else {
-      setIsLoading(false);
+    if (ready) {
+      if (authenticated && user?.wallet?.address) {
+        setWalletAddress(user.wallet.address);
+        fetchBalances(user.wallet.address);
+      } else {
+        setIsLoading(false);
+      }
     }
-  }, []);
+  }, [ready, authenticated, user]);
 
   const fetchBalances = async (address: string) => {
     setIsLoading(true);
     try {
+      console.log("🔍 Fetching balances for address:", address);
+
+      // Check current network and switch to Sepolia if needed
+      const chainId = await window.ethereum?.request({ method: "eth_chainId" });
+      console.log("🌐 Current chain ID:", chainId);
+
+      if (chainId !== "0xaa36a7") {
+        // Sepolia chain ID
+        console.log("🔄 Switching to Sepolia network...");
+        try {
+          await window.ethereum?.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: "0xaa36a7" }],
+          });
+        } catch (switchError: unknown) {
+          if ((switchError as { code?: number }).code === 4902) {
+            // Network not added, try to add it
+            await window.ethereum?.request({
+              method: "wallet_addEthereumChain",
+              params: [
+                {
+                  chainId: "0xaa36a7",
+                  chainName: "Sepolia",
+                  rpcUrls: ["https://sepolia.infura.io/v3/"],
+                  nativeCurrency: {
+                    name: "Ethereum",
+                    symbol: "ETH",
+                    decimals: 18,
+                  },
+                  blockExplorerUrls: ["https://sepolia.etherscan.io"],
+                },
+              ],
+            });
+          }
+        }
+      }
+
       const balancePromises = SEPOLIA_TOKENS.map(async (token) => {
         let balance = "0";
 
         if (token.symbol === "ETH") {
           // Fetch native ETH balance
-          const ethBalance = await window.ethereum.request({
-            method: "eth_getBalance",
-            params: [address, "latest"],
-          });
-          balance = formatUnits(BigInt(ethBalance), token.decimals);
+          if (window.ethereum) {
+            const ethBalance = await window.ethereum.request({
+              method: "eth_getBalance",
+              params: [address, "latest"],
+            });
+            balance = formatUnits(BigInt(ethBalance), token.decimals);
+            console.log(`✅ ETH balance: ${balance} ETH`);
+          }
         } else {
           // Fetch ERC-20 token balance
           try {
-            const tokenBalance = await window.ethereum.request({
-              method: "eth_call",
-              params: [
-                {
-                  to: token.address,
-                  data: `0x70a08231000000000000000000000000${address.slice(2)}`,
-                },
-                "latest",
-              ],
-            });
-            balance = formatUnits(BigInt(tokenBalance), token.decimals);
+            if (window.ethereum) {
+              const callData = `0x70a08231000000000000000000000000${address.slice(
+                2
+              )}`;
+              console.log(`🔍 Calling USDC contract:`, {
+                contract: token.address,
+                address: address,
+                callData: callData,
+              });
+
+              const tokenBalance = await window.ethereum.request({
+                method: "eth_call",
+                params: [
+                  {
+                    to: token.address,
+                    data: callData,
+                  },
+                  "latest",
+                ],
+              });
+              balance = formatUnits(BigInt(tokenBalance), token.decimals);
+              console.log(
+                `✅ ${token.symbol} balance: ${balance} ${token.symbol}`
+              );
+            }
           } catch (error) {
             console.error(`Error fetching ${token.symbol} balance:`, error);
             balance = "0";
@@ -97,6 +147,7 @@ export default function TokenHoldings() {
       });
 
       const tokenBalances = await Promise.all(balancePromises);
+      console.log("📊 Final balances:", tokenBalances);
       setBalances(tokenBalances);
     } catch (error) {
       console.error("Error fetching balances:", error);
@@ -105,7 +156,7 @@ export default function TokenHoldings() {
     }
   };
 
-  const formatBalance = (balance: string, decimals: number) => {
+  const formatBalance = (balance: string) => {
     const num = parseFloat(balance);
     if (num === 0) return "0.00";
     if (num < 0.01) return "< 0.01";
@@ -126,7 +177,23 @@ export default function TokenHoldings() {
     return (ethValue + usdcValue).toFixed(2);
   };
 
-  if (!walletAddress) {
+  if (!ready) {
+    return (
+      <div className="bg-dark-800 rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">
+          Token Holdings
+        </h3>
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto mb-4 bg-dark-700 rounded-full flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          </div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authenticated || !walletAddress) {
     return (
       <div className="bg-dark-800 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-white mb-4">
@@ -193,9 +260,11 @@ export default function TokenHoldings() {
             >
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 rounded-full overflow-hidden">
-                  <img
+                  <Image
                     src={token.logo}
                     alt={`${token.symbol} logo`}
+                    width={32}
+                    height={32}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       // Fallback to text symbol if image fails to load
@@ -217,7 +286,7 @@ export default function TokenHoldings() {
               </div>
               <div className="text-right">
                 <p className="text-white font-semibold">
-                  {formatBalance(balance, token.decimals)}
+                  {formatBalance(balance)}
                 </p>
                 <p className="text-gray-400 text-sm">
                   {token.symbol === "ETH" ? "ETH" : "USDC"}
