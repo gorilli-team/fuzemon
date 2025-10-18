@@ -19,6 +19,7 @@ import { createOrder as createOrderLogic } from "../logic/swap";
 import { type Order, type SwapState } from "../types/order";
 import { sepolia } from "wagmi/chains";
 import { monadTestnet } from "../config/wagmi";
+import { apiService } from "../services/api";
 
 export default function RealSwapComponent() {
   const { address, isConnected } = useAccount();
@@ -205,23 +206,31 @@ export default function RealSwapComponent() {
     setIsLoading(true);
 
     // Create order details for storage
-    const orderId = Date.now().toString();
-    const orderDetails: Order = {
-      id: orderId,
+    const orderDetails: Omit<Order, "id" | "createdAt"> = {
       swapState: swapState,
       fromToken: swapState.fromToken,
       toToken: swapState.toToken,
       message: "Order created and signed",
       status: "CREATED",
-      createdAt: Date.now(),
       transactions: {},
     };
 
-    // Save order to localStorage immediately in CREATED state
-    const existingOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-    existingOrders.push(orderDetails);
-    localStorage.setItem("orders", JSON.stringify(existingOrders));
-    console.log("💾 Order created and saved to localStorage with ID:", orderId);
+    // Save order to backend
+    try {
+      const response = await apiService.createOrder(orderDetails);
+      if (response.success && response.data) {
+        console.log(
+          "💾 Order created and saved to backend with ID:",
+          response.data.id
+        );
+      } else {
+        console.error("❌ Failed to save order to backend");
+        return;
+      }
+    } catch (error) {
+      console.error("❌ Error saving order to backend:", error);
+      return;
+    }
 
     try {
       console.log("🔄 Switching to source chain...");

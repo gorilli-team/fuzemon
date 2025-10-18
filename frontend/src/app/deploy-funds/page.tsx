@@ -4,7 +4,8 @@ import Image from "next/image";
 import OpenOrders from "../components/OpenOrders";
 import TokenHoldings from "../components/TokenHoldings";
 import RealSwapComponent from "../components/RealSwapComponent";
-import { Order, SwapState, Token } from "../types/order";
+import { SwapState, Token } from "../types/order";
+import { apiService } from "../services/api";
 
 interface NetworkInfo {
   name: string;
@@ -141,10 +142,8 @@ export default function DeployFundsPage() {
     setToNetwork(temp);
   };
 
-  const createLimitOrder = () => {
+  const createLimitOrder = async () => {
     if (!limitOrderAmount || !limitOrderPrice) return;
-
-    const orderId = Date.now().toString();
 
     // Create token objects for the order
     const fromToken: Token = {
@@ -171,26 +170,32 @@ export default function DeployFundsPage() {
       userAddress: walletAddress,
     };
 
-    const order: Order = {
-      id: orderId,
+    // Order data for backend
+    const orderData = {
       swapState,
       fromToken,
       toToken,
-      status: "CREATED",
-      createdAt: Date.now(),
+      status: "CREATED" as const,
       message: `Limit ${limitOrderType} order created for ${limitOrderAmount} ${fromToken.symbol} at ${limitOrderPrice} ${toToken.symbol}`,
+      transactions: {},
     };
 
-    // Save to localStorage
-    const existingOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-    existingOrders.push(order);
-    localStorage.setItem("orders", JSON.stringify(existingOrders));
+    // Save to backend
+    try {
+      const response = await apiService.createOrder(orderData);
 
-    // Reset form
-    setLimitOrderAmount("");
-    setLimitOrderPrice("");
-
-    alert("Limit order created successfully!");
+      if (response.success) {
+        // Reset form
+        setLimitOrderAmount("");
+        setLimitOrderPrice("");
+        alert("Limit order created successfully!");
+      } else {
+        alert("Failed to create limit order. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error creating limit order:", error);
+      alert("Failed to create limit order. Please try again.");
+    }
   };
 
   return (
