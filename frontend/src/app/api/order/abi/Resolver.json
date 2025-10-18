@@ -1,0 +1,113 @@
+[
+  {
+    "type": "function",
+    "name": "deploySrc",
+    "inputs": [
+      {
+        "name": "immutables",
+        "type": "tuple",
+        "components": [
+          { "name": "orderHash", "type": "bytes32" },
+          { "name": "hashlock", "type": "bytes32" },
+          { "name": "maker", "type": "uint256" },
+          { "name": "taker", "type": "uint256" },
+          { "name": "token", "type": "uint256" },
+          { "name": "amount", "type": "uint256" },
+          { "name": "safetyDeposit", "type": "uint256" },
+          { "name": "timelocks", "type": "uint256" }
+        ]
+      },
+      {
+        "name": "order",
+        "type": "tuple",
+        "components": [
+          { "name": "salt", "type": "uint256" },
+          { "name": "maker", "type": "uint256" },
+          { "name": "receiver", "type": "uint256" },
+          { "name": "makerAsset", "type": "uint256" },
+          { "name": "takerAsset", "type": "uint256" },
+          { "name": "makingAmount", "type": "uint256" },
+          { "name": "takingAmount", "type": "uint256" },
+          { "name": "makerTraits", "type": "uint256" }
+        ]
+      },
+      { "name": "r", "type": "bytes32" },
+      { "name": "vs", "type": "bytes32" },
+      { "name": "amount", "type": "uint256" },
+      { "name": "takerTraits", "type": "uint256" },
+      { "name": "args", "type": "bytes" }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "deployDst",
+    "inputs": [
+      {
+        "name": "dstImmutables",
+        "type": "tuple",
+        "components": [
+          { "name": "orderHash", "type": "bytes32" },
+          { "name": "hashlock", "type": "bytes32" },
+          { "name": "maker", "type": "uint256" },
+          { "name": "taker", "type": "uint256" },
+          { "name": "token", "type": "uint256" },
+          { "name": "amount", "type": "uint256" },
+          { "name": "safetyDeposit", "type": "uint256" },
+          { "name": "timelocks", "type": "uint256" }
+        ]
+      },
+      { "name": "srcCancellationTimestamp", "type": "uint256" }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "withdraw",
+    "inputs": [
+      { "name": "escrow", "type": "address" },
+      { "name": "secret", "type": "bytes32" },
+      {
+        "name": "immutables",
+        "type": "tuple",
+        "components": [
+          { "name": "orderHash", "type": "bytes32" },
+          { "name": "hashlock", "type": "bytes32" },
+          { "name": "maker", "type": "uint256" },
+          { "name": "taker", "type": "uint256" },
+          { "name": "token", "type": "uint256" },
+          { "name": "amount", "type": "uint256" },
+          { "name": "safetyDeposit", "type": "uint256" },
+          { "name": "timelocks", "type": "uint256" }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "cancel",
+    "inputs": [
+      { "name": "escrow", "type": "address" },
+      {
+        "name": "immutables",
+        "type": "tuple",
+        "components": [
+          { "name": "orderHash", "type": "bytes32" },
+          { "name": "hashlock", "type": "bytes32" },
+          { "name": "maker", "type": "uint256" },
+          { "name": "taker", "type": "uint256" },
+          { "name": "token", "type": "uint256" },
+          { "name": "amount", "type": "uint256" },
+          { "name": "safetyDeposit", "type": "uint256" },
+          { "name": "timelocks", "type": "uint256" }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  }
+]

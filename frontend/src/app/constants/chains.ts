@@ -9,12 +9,12 @@ export interface ChainInfo {
 
 export const CHAINS: ChainInfo[] = [
   {
-    id: 11155111, // Ethereum Sepolia
-    name: "Ethereum Sepolia",
-    rpcUrl: "https://sepolia.infura.io/v3/",
+    id: 84532, // Base Sepolia
+    name: "Base Sepolia",
+    rpcUrl: "https://base-sepolia-rpc.publicnode.com",
     symbol: "ETH",
     icon: "/ethereum.png",
-    blockExplorer: "https://sepolia.etherscan.io",
+    blockExplorer: "https://sepolia.basescan.org",
   },
   {
     id: 10143, // Monad Testnet

@@ -1,126 +1,137 @@
+import { Address, Immutables } from "@1inch/cross-chain-sdk";
 import { NextResponse } from "next/server";
-import { getTransactionLink } from "../../utils/transaction";
-import { ChainConfigs, getChainResolver } from "../constants/contracts";
+import {
+  getBlockExplorerLink,
+  getTransactionLink,
+} from "../../utils/transaction";
+import { ChainConfigs, getChainResolver } from "../../constants/contracts";
+import { getSrcDeployEvent } from "./escrow";
+import { deploySrcCallData, Resolver } from "./resolver";
 
 export async function POST(request: Request) {
-  try {
-    const {
-      order,
-      swapState,
-      signature,
-      immutables,
-      hashLock,
-      orderHash,
-      orderBuild,
-      takerTraits,
-      srcSafetyDeposit,
-    } = await request.json();
+  const {
+    order,
+    swapState,
+    signature,
+    immutables,
+    hashLock,
+    orderHash,
+    orderBuild,
+    takerTraits,
+    srcSafetyDeposit,
+    userAddress, // Add user address to ensure same user control
+  } = await request.json();
 
-    console.log("🚀 Starting cross-chain exchange process...");
+  console.log("🚀 Starting cross-chain exchange process...");
+  console.log("👤 User address:", userAddress);
 
-    // Get chain resolvers
-    const srcChainResolver = getChainResolver(swapState.fromChain);
-    const dstChainResolver = getChainResolver(swapState.toChain);
+  const resolverContract = new Resolver(
+    ChainConfigs[swapState.fromChain].ResolverContractAddress,
+    ChainConfigs[swapState.toChain].ResolverContractAddress
+  );
 
-    // Simulate order fill transaction
-    const fillAmount = order.inner.inner.makingAmount;
-    const { txHash: orderFillHash, blockHash: srcDeployBlock } =
-      await srcChainResolver.send({
-        to: ChainConfigs[swapState.fromChain].ResolverContractAddress,
-        data: "0x", // Placeholder for actual call data
-        value: srcSafetyDeposit,
-      });
+  // The order data should contain the necessary properties
+  const srcChainResolver = getChainResolver(swapState.fromChain, userAddress);
 
-    console.log("✅ Order filled successfully:", orderFillHash);
+  const fillAmount = order.inner.inner.makingAmount;
 
-    // Simulate destination escrow deployment
-    const { txHash: dstDepositHash, blockTimestamp: dstDeployedAt } =
-      await dstChainResolver.send({
-        to: ChainConfigs[swapState.toChain].ResolverContractAddress,
-        data: "0x", // Placeholder for actual call data
-        value: BigInt(0),
-      });
+  console.log("🔍 About to call deploySrcCallData with:", {
+    resolverAddress: ChainConfigs[swapState.fromChain].ResolverContractAddress,
+    signature: signature?.slice(0, 20) + "...",
+    immutables: Object.keys(immutables),
+    takerTraits,
+    fillAmount: fillAmount.toString(),
+    orderHash,
+    orderBuild: typeof orderBuild,
+    srcSafetyDeposit: srcSafetyDeposit.toString(),
+  });
 
-    console.log("✅ Destination escrow deployed:", dstDepositHash);
+  const callData = deploySrcCallData(
+    ChainConfigs[swapState.fromChain].ResolverContractAddress,
+    signature,
+    immutables,
+    takerTraits,
+    fillAmount,
+    orderHash,
+    hashLock,
+    orderBuild,
+    srcSafetyDeposit
+  );
 
-    const response = {
-      srcEscrowEvent: {
-        immutables: {
-          orderHash,
-          hashLock,
-          maker: swapState.userAddress,
-          taker: "0x0000000000000000000000000000000000000000",
-          token: swapState.fromToken.address,
-          amount: fillAmount,
-          safetyDeposit: srcSafetyDeposit,
-          timeLocks: {
-            toSrcTimeLocks: () => ({ privateCancellation: BigInt(0) }),
-          },
-        },
-        complement: {
-          maker: swapState.userAddress,
-          amount: fillAmount,
-          token: swapState.toToken.address,
-          safetyDeposit: BigInt(0),
-        },
-      },
-      dstDeployedAt,
-      dstImmutablesData: {
-        orderHash,
-        hashLock,
-        maker: swapState.userAddress,
-        taker: "0x0000000000000000000000000000000000000000",
-        token: swapState.toToken.address,
-        amount: fillAmount,
-        safetyDeposit: BigInt(0),
-        deployedAt: dstDeployedAt,
-      },
-      dstImmutablesHash: "0x" + Math.random().toString(16).substr(2, 64),
-      srcImmutablesHash: "0x" + Math.random().toString(16).substr(2, 64),
-      srcImmutablesData: {
-        orderHash,
-        hashLock,
-        maker: swapState.userAddress,
-        taker: "0x0000000000000000000000000000000000000000",
-        token: swapState.fromToken.address,
-        amount: fillAmount,
-        safetyDeposit: srcSafetyDeposit,
-      },
-      transactions: {
-        orderFill: {
-          txHash: orderFillHash,
-          txLink: getTransactionLink(swapState.fromChain, orderFillHash),
-          blockHash: srcDeployBlock,
-          blockLink: getTransactionLink(swapState.fromChain, srcDeployBlock),
-          chainId: swapState.fromChain,
-          description: "Order fill transaction",
-        },
-        dstEscrowDeploy: {
-          txHash: dstDepositHash,
-          txLink: getTransactionLink(swapState.toChain, dstDepositHash),
-          chainId: swapState.toChain,
-          description: "Destination escrow deployment",
-        },
-      },
-      status: "escrow_deployed",
-      message:
-        "Cross-chain exchange initiated successfully. Escrow contracts deployed on both chains.",
-    };
+  console.log("📤 Sending transaction with data:", {
+    to: callData.to,
+    data: callData.data?.slice(0, 20) + "...",
+    value: callData.value?.toString(),
+  });
 
-    return NextResponse.json(response, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-  } catch (error) {
-    console.error("❌ Order processing failed:", error);
-    return NextResponse.json(
-      {
-        error: "Order processing failed",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
+  const { txHash: orderFillHash, blockHash: srcDeployBlock } =
+    await srcChainResolver.send(callData);
+  console.log("✅ Order filled successfully:", orderFillHash);
+
+  console.log("🔍 Fetching source escrow deployment event...");
+  const srcEscrowEvent = await getSrcDeployEvent(
+    srcChainResolver.provider,
+    ChainConfigs[swapState.fromChain].EscrowFactory,
+    srcDeployBlock
+  );
+  console.log("✅ Source escrow event retrieved");
+  const dstImmutables = (srcEscrowEvent[0] as Immutables)
+    .withComplement(srcEscrowEvent[1])
+    .withTaker(new Address(resolverContract.dstAddress));
+
+  console.log("🏗️ Deploying destination escrow...");
+  const dstChainResolver = getChainResolver(swapState.toChain, userAddress);
+  const { txHash: dstDepositHash, blockTimestamp: dstDeployedAt } =
+    await dstChainResolver.send(
+      resolverContract.deployDst(dstImmutables as Immutables)
     );
-  }
+  console.log("✅ Destination escrow deployed:", dstDepositHash);
+
+  const dstImmutablesData = dstImmutables.withDeployedAt(dstDeployedAt).build();
+  const dstImmutablesHash = dstImmutables.withDeployedAt(dstDeployedAt).hash();
+  const srcImmutablesHash = (srcEscrowEvent[0] as Immutables).hash();
+  const srcImmutablesData = (srcEscrowEvent[0] as Immutables).build();
+
+  const res = {
+    srcEscrowEvent: srcEscrowEvent,
+    dstDeployedAt: dstDeployedAt,
+    dstImmutablesData: dstImmutablesData,
+    dstImmutablesHash: dstImmutablesHash,
+    srcImmutablesHash: srcImmutablesHash,
+    srcImmutablesData: srcImmutablesData,
+    // Transaction information with links
+    transactions: {
+      orderFill: {
+        txHash: orderFillHash,
+        txLink: getTransactionLink(swapState.fromChain, orderFillHash),
+        blockHash: srcDeployBlock,
+        blockLink: getBlockExplorerLink(swapState.fromChain, srcDeployBlock),
+        chainId: swapState.fromChain,
+        description: "Order fill transaction",
+      },
+      dstEscrowDeploy: {
+        txHash: dstDepositHash,
+        txLink: getTransactionLink(swapState.toChain, dstDepositHash),
+        chainId: swapState.toChain,
+        description: "Destination escrow deployment",
+      },
+    },
+    status: "escrow_deployed",
+    message:
+      "Cross-chain exchange initiated successfully. Escrow contracts deployed on both chains.",
+  };
+
+  // Custom serializer to handle BigInt values
+  const serializedRes = JSON.parse(
+    JSON.stringify(res, (key, value) =>
+      typeof value === "bigint" ? value.toString() : value
+    )
+  );
+
+  return NextResponse.json(serializedRes, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
 }

@@ -1,86 +1,125 @@
-import { Address, Order, OrderData } from "@1inch/cross-chain-sdk";
+"use client";
+import {
+  Address,
+  AuctionDetails,
+  CrossChainOrder,
+  HashLock,
+  randBigInt,
+  TimeLocks,
+} from "@1inch/cross-chain-sdk";
+import { parseUnits } from "viem";
+import { ChainConfigs } from "../constants/contracts";
 
-export interface CreateOrderParams {
-  maker: string;
-  fromAmount: string;
-  toAmount: string;
-  fromTokenAddress: string;
-  toTokenAddress: string;
+// Type definitions for SDK compatibility
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type EvmAddress = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AddressLike = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type EvmChain = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupportedChain = any;
+
+export const createOrder = async (
+  srcChainUserAddress: string,
+  makingAmount: string,
+  takingAmount: string,
+  srcTokenAddress: string,
+  dstTokenAddress: string,
+  secret: string,
+  srcChainId: number,
+  dstChainId: number,
+  srcTokenDecimals: number = 18,
+  dstTokenDecimals: number = 18
+): Promise<{
+  order: CrossChainOrder;
+  orderdata: {
+    domain: Record<string, unknown>;
+    types: Record<string, unknown>;
+    primaryType: string;
+    message: Record<string, unknown>;
+  };
   secret: string;
-  fromChain: number;
-  toChain: number;
-  fromTokenDecimals: number;
-  toTokenDecimals: number;
-}
+}> => {
+  const escrowFactoryAddress = ChainConfigs[srcChainId].EscrowFactory;
+  const srcTimestamp = BigInt(Math.floor(Date.now() / 1000));
 
-export const createOrder = async (params: CreateOrderParams) => {
-  const {
-    maker,
-    fromAmount,
-    toAmount,
-    fromTokenAddress,
-    toTokenAddress,
-    secret,
-    fromChain,
-    toChain,
-    fromTokenDecimals,
-    toTokenDecimals,
-  } = params;
+  // Create order info
+  const orderInfo = {
+    makerAsset: new Address(srcTokenAddress) as EvmAddress,
+    takerAsset: new Address(dstTokenAddress) as AddressLike,
+    makingAmount: parseUnits(makingAmount, srcTokenDecimals),
+    takingAmount: parseUnits(takingAmount, dstTokenDecimals),
+    maker: new Address(srcChainUserAddress) as EvmAddress,
+    salt: randBigInt(1000),
+  };
 
-  // Create order using 1inch SDK
-  const order = Order.new({
-    maker: new Address(maker),
-    makerAsset: new Address(fromTokenAddress),
-    takerAsset: new Address(toTokenAddress),
-    makingAmount: BigInt(
-      Math.floor(parseFloat(fromAmount) * Math.pow(10, fromTokenDecimals))
-    ),
-    takingAmount: BigInt(
-      Math.floor(parseFloat(toAmount) * Math.pow(10, toTokenDecimals))
-    ),
-    receiver: new Address(maker),
-    allowedSender: new Address("0x0000000000000000000000000000000000000000"),
-    expiration: BigInt(Math.floor(Date.now() / 1000) + 3600), // 1 hour from now
-    salt: BigInt(Math.floor(Math.random() * 1000000)),
-  });
+  // Create escrow parameters
+  const escrowParams = {
+    hashLock: HashLock.forSingleFill(secret),
+    timeLocks: TimeLocks.new({
+      srcWithdrawal: BigInt(10), // 10sec finality lock for test
+      srcPublicWithdrawal: BigInt(120), // 2m for private withdrawal
+      srcCancellation: BigInt(121), // 1sec public withdrawal
+      srcPublicCancellation: BigInt(122), // 1sec private cancellation
+      dstWithdrawal: BigInt(10), // 10sec finality lock for test
+      dstPublicWithdrawal: BigInt(100), // 100sec private withdrawal
+      dstCancellation: BigInt(101), // 1sec public withdrawal
+    }),
+    srcChainId: srcChainId as EvmChain,
+    dstChainId: dstChainId as SupportedChain,
+    srcSafetyDeposit: ChainConfigs[srcChainId].SafetyDeposit,
+    dstSafetyDeposit: ChainConfigs[dstChainId].SafetyDeposit,
+  };
 
-  // Create order data for signing
-  const orderdata: OrderData = {
+  // Create auction details
+  const details = {
+    auction: new AuctionDetails({
+      initialRateBump: 0,
+      points: [],
+      duration: BigInt(120),
+      startTime: BigInt(srcTimestamp),
+    }),
+    whitelist: [
+      {
+        address: new Address(
+          ChainConfigs[srcChainId].ResolverContractAddress
+        ) as EvmAddress,
+        allowFrom: BigInt(0),
+      },
+    ],
+    resolvingStartTime: BigInt(0),
+  };
+
+  // Create extra options
+  const extra = {
+    nonce: randBigInt(1000),
+    allowPartialFills: false,
+    allowMultipleFills: false,
+  };
+
+  const order = CrossChainOrder.new(
+    new Address(escrowFactoryAddress) as EvmAddress,
+    orderInfo,
+    escrowParams,
+    details,
+    extra
+  );
+
+  console.log("order", order);
+
+  const orderTypedData = order.getTypedData(srcChainId);
+  const orderdata = {
     domain: {
       name: "1inch Limit Order Protocol",
-      version: "2",
-      chainId: fromChain,
-      verifyingContract: "0x0000000000000000000000000000000000000000", // Replace with actual contract
+      version: "4",
+      chainId: srcChainId,
+      verifyingContract: ChainConfigs[srcChainId].LOP,
     },
-    types: {
-      Order: [
-        { name: "maker", type: "address" },
-        { name: "makerAsset", type: "address" },
-        { name: "takerAsset", type: "address" },
-        { name: "makingAmount", type: "uint256" },
-        { name: "takingAmount", type: "uint256" },
-        { name: "receiver", type: "address" },
-        { name: "allowedSender", type: "address" },
-        { name: "expiration", type: "uint256" },
-        { name: "salt", type: "uint256" },
-      ],
-    },
-    primaryType: "Order",
-    message: {
-      maker,
-      makerAsset: fromTokenAddress,
-      takerAsset: toTokenAddress,
-      makingAmount: order.makingAmount.toString(),
-      takingAmount: order.takingAmount.toString(),
-      receiver: maker,
-      allowedSender: "0x0000000000000000000000000000000000000000",
-      expiration: order.expiration.toString(),
-      salt: order.salt.toString(),
-    },
+    types: orderTypedData.types,
+    primaryType: orderTypedData.primaryType,
+    message: orderTypedData.message,
   };
 
-  return {
-    order,
-    orderdata,
-  };
+  return { order, orderdata, secret };
 };

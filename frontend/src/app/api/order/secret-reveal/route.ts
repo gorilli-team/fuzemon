@@ -11,6 +11,7 @@ export async function POST(request: Request) {
       srcImmutablesHash,
       dstImmutablesHash,
       srcImmutablesData,
+      userAddress, // Add user address to ensure same user control
     } = await request.json();
 
     console.log("🔍 Calculating escrow addresses...");
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     await new Promise((resolve) => setTimeout(resolve, 10000));
 
     console.log("💰 Starting destination escrow withdrawal...");
-    const dstChainResolver = getChainResolver(swapState.toChain);
+    const dstChainResolver = getChainResolver(swapState.toChain, userAddress);
     const { txHash: dstWithdrawHash } = await dstChainResolver.send({
       to: ChainConfigs[swapState.toChain].ResolverContractAddress,
       data: "0x", // Placeholder for actual withdrawal call data
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     console.log("✅ Destination escrow withdrawn:", dstWithdrawHash);
 
     console.log("🔄 Withdrawing from source escrow for resolver...");
-    const srcChainResolver = getChainResolver(swapState.fromChain);
+    const srcChainResolver = getChainResolver(swapState.fromChain, userAddress);
     const { txHash: resolverWithdrawHash } = await srcChainResolver.send({
       to: ChainConfigs[swapState.fromChain].ResolverContractAddress,
       data: "0x", // Placeholder for actual withdrawal call data
