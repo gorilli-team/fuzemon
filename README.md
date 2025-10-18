@@ -20,3 +20,55 @@ Monad Testnet:
 - AggregationRouterV6: [0xCAEa711010565904d3427b74794e3F36c191a6e7](https://testnet.monadexplorer.com/address/0xCAEa711010565904d3427b74794e3F36c191a6e7)
 - EscrowFactory: [0x65c169Cef9904499788FE61ea708EB6F99C34Ff6](https://testnet.monadexplorer.com/address/0x65c169Cef9904499788FE61ea708EB6F99C34Ff6)
 - Resolver: [0xb0CC0006662f91f7cEEf48eE444330f1B7A67D35](https://testnet.monadexplorer.com/address/0xb0CC0006662f91f7cEEf48eE444330f1B7A67D35)
+
+We then created a signed order according to the `CrossChainOrder` struct provided by the `@1inch/cross-chain-sdk`. In the example below, we wanted to transfer 100 USDC from Ethereum Sepolia to Monad Testnet, to facilitate the onboarding on the most popular trading apps on the Monad ecosystem, such as <strong>Gorillionaire</strong>.
+
+```
+const order = Sdk.CrossChainOrder.new(
+                new Address(src.escrowFactory),
+                {
+                    salt: Sdk.randBigInt(1000n),
+                    maker: new Address(await srcChainUser.getAddress()),
+                    makingAmount: parseUnits('100', 6),
+                    takingAmount: parseUnits('99', 6),
+                    makerAsset: new Address(config.chain.source.tokens.USDC.address),
+                    takerAsset: new Address(config.chain.destination.tokens.USDC.address)
+                },
+                {
+                    hashLock: Sdk.HashLock.forSingleFill(secret),
+                    timeLocks: Sdk.TimeLocks.new({
+                        srcWithdrawal: 10n,
+                        srcPublicWithdrawal: 120n,
+                        srcCancellation: 121n,
+                        srcPublicCancellation: 122n,
+                        dstWithdrawal: 10n,
+                        dstPublicWithdrawal: 100n,
+                        dstCancellation: 101n
+                    }),
+                    srcChainId,
+                    dstChainId,
+                    srcSafetyDeposit: parseEther('0.001'),
+                    dstSafetyDeposit: parseEther('0.001')
+                },
+                {
+                    auction: new Sdk.AuctionDetails({
+                        initialRateBump: 0,
+                        points: [],
+                        duration: 120n,
+                        startTime: srcTimestamp
+                    }),
+                    whitelist: [
+                        {
+                            address: new Address(src.resolver),
+                            allowFrom: 0n
+                        }
+                    ],
+                    resolvingStartTime: 0n
+                },
+                {
+                    nonce: Sdk.randBigInt(UINT_40_MAX),
+                    allowPartialFills: false,
+                    allowMultipleFills: false
+                }
+            )
+```
