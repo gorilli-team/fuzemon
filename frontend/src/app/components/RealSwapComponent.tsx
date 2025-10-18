@@ -17,7 +17,7 @@ import { ChainConfigs } from "../constants/contracts";
 import { LOP_ADDRESSES, TOKENS } from "../constants/tokens";
 import { createOrder as createOrderLogic } from "../logic/swap";
 import { type Order, type SwapState } from "../types/order";
-import { sepolia } from "wagmi/chains";
+import { baseSepolia } from "wagmi/chains";
 import { monadTestnet } from "../config/wagmi";
 import { apiService } from "../services/api";
 
@@ -27,10 +27,13 @@ export default function RealSwapComponent() {
   const { writeContract } = useWriteContract();
   const { signTypedDataAsync } = useSignTypedData();
 
+  // DEBUG MODE - Set to true to block API calls and redirects
+  const DEBUG_MODE = true;
+
   const [swapState, setSwapState] = useState<SwapState>({
-    fromChain: sepolia.id, // Ethereum Sepolia
+    fromChain: baseSepolia.id, // Base Sepolia
     toChain: monadTestnet.id, // Monad Testnet
-    fromToken: TOKENS[sepolia.id][0],
+    fromToken: TOKENS[baseSepolia.id][0],
     toToken: TOKENS[monadTestnet.id][0],
     fromAmount: "",
     toAmount: "",
@@ -52,7 +55,7 @@ export default function RealSwapComponent() {
       "0x0000000000000000000000000000000000000000"
         ? undefined
         : (swapState.fromToken.address as `0x${string}`),
-    chainId: swapState.fromChain,
+    chainId: swapState.fromChain as any,
   });
 
   const { data: toTokenBalance } = useBalance({
@@ -61,7 +64,7 @@ export default function RealSwapComponent() {
       swapState.toToken.address === "0x0000000000000000000000000000000000000000"
         ? undefined
         : (swapState.toToken.address as `0x${string}`),
-    chainId: swapState.toChain,
+    chainId: swapState.toChain as any,
   });
 
   const { data: allowance } = useReadContract({
@@ -80,7 +83,7 @@ export default function RealSwapComponent() {
     ],
     functionName: "allowance",
     args: [address!, LOP_ADDRESSES[swapState.fromChain] as `0x${string}`],
-    chainId: swapState.fromChain,
+    chainId: swapState.fromChain as any,
   });
 
   const needsApproval = () => {
@@ -166,7 +169,7 @@ export default function RealSwapComponent() {
           LOP_ADDRESSES[swapState.fromChain] as `0x${string}`,
           requiredAmount,
         ],
-        chainId: swapState.fromChain,
+        chainId: swapState.fromChain as any,
       });
 
       console.log("✅ Spending cap approved successfully");
@@ -212,6 +215,9 @@ export default function RealSwapComponent() {
 
     setIsLoading(true);
 
+    console.log("🐛 DEBUG MODE:", DEBUG_MODE);
+    console.log("🐛 Starting CrossChainOrder creation process...");
+
     // Create order details for storage
     const orderDetails: Omit<Order, "id" | "createdAt"> = {
       swapState: swapState,
@@ -222,26 +228,35 @@ export default function RealSwapComponent() {
       transactions: {},
     };
 
-    // Save order to backend
-    try {
-      const response = await apiService.createOrder(orderDetails);
-      if (response.success && response.data) {
-        console.log(
-          "💾 Order created and saved to backend with ID:",
-          response.data.id
-        );
-      } else {
-        console.error("❌ Failed to save order to backend");
+    // DEBUG MODE: Skip backend API calls
+    let orderId: string;
+    if (DEBUG_MODE) {
+      console.log("🐛 DEBUG MODE: Skipping backend API call");
+      orderId = "debug-order-" + Date.now();
+      console.log("🐛 DEBUG MODE: Generated mock order ID:", orderId);
+    } else {
+      // Save order to backend
+      try {
+        const response = await apiService.createOrder(orderDetails);
+        if (response.success && response.data) {
+          orderId = response.data.id;
+          console.log(
+            "💾 Order created and saved to backend with ID:",
+            orderId
+          );
+        } else {
+          console.error("❌ Failed to save order to backend");
+          return;
+        }
+      } catch (error) {
+        console.error("❌ Error saving order to backend:", error);
         return;
       }
-    } catch (error) {
-      console.error("❌ Error saving order to backend:", error);
-      return;
     }
 
     try {
       console.log("🔄 Switching to source chain...");
-      await switchChain({ chainId: swapState.fromChain });
+      await switchChain({ chainId: swapState.fromChain as any });
       console.log("Switched to source chain");
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -250,6 +265,19 @@ export default function RealSwapComponent() {
       console.log("✅ Switched to source chain successfully");
 
       console.log("📝 Creating order data...");
+      console.log("🐛 DEBUG: Order creation parameters:", {
+        address: address,
+        fromAmount: swapState.fromAmount,
+        toAmount: swapState.toAmount,
+        fromTokenAddress: swapState.fromToken.address,
+        toTokenAddress: swapState.toToken.address,
+        secret: secret,
+        fromChain: swapState.fromChain,
+        toChain: swapState.toChain,
+        fromTokenDecimals: swapState.fromToken.decimals,
+        toTokenDecimals: swapState.toToken.decimals,
+      });
+
       const order = await createOrderLogic(
         address!,
         swapState.fromAmount,
@@ -263,8 +291,17 @@ export default function RealSwapComponent() {
         swapState.toToken.decimals
       );
 
+      console.log("🐛 DEBUG: Order created successfully:", order);
+      console.log("🐛 DEBUG: Order structure:", {
+        order: order.order,
+        orderdata: order.orderdata,
+        secret: order.secret,
+      });
+
       console.log("🔐 Signing order data...");
+      console.log("🐛 DEBUG: Typed data to sign:", order.orderdata);
       const signature = await signTypedDataAsync(order.orderdata);
+      console.log("🐛 DEBUG: Signature generated:", signature);
 
       console.log("📦 Preparing order for submission...");
       const orderBuild = order.order.build();
@@ -289,7 +326,7 @@ export default function RealSwapComponent() {
           swapState.fromChain,
           new Address(
             ChainConfigs[swapState.fromChain].ResolverContractAddress
-          ),
+          ) as any,
           order.order.makingAmount,
           hashLock
         )
@@ -300,38 +337,85 @@ export default function RealSwapComponent() {
 
       console.log("🚀 Submitting order to exchange...");
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      let resultBody: any;
 
-      const response = await fetch("/api/order", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(
-          {
-            order: order.order,
-            swapState: swapState,
-            signature: signature,
-            immutables: immutables,
-            hashLock: hashLock,
-            orderHash: orderHash,
-            orderBuild: orderBuild,
-            takerTraits: takerTraits,
-            srcSafetyDeposit: srcSafetyDeposit,
+      if (DEBUG_MODE) {
+        console.log("🐛 DEBUG MODE: Skipping /api/order call");
+        console.log("🐛 DEBUG MODE: Order data that would be sent:", {
+          order: order.order,
+          swapState: swapState,
+          signature: signature,
+          immutables: immutables,
+          hashLock: hashLock,
+          orderHash: orderHash,
+          orderBuild: orderBuild,
+          takerTraits: takerTraits,
+          srcSafetyDeposit: srcSafetyDeposit,
+        });
+
+        // Mock response for debugging
+        resultBody = {
+          srcEscrowEvent: "debug-escrow-event",
+          dstDeployedAt: Date.now(),
+          dstImmutablesData: "debug-immutables-data",
+          dstImmutablesHash: "debug-immutables-hash",
+          srcImmutablesHash: "debug-src-immutables-hash",
+          srcImmutablesData: "debug-src-immutables-data",
+          transactions: {
+            orderFill: {
+              txHash: "debug-order-fill-hash",
+              txLink: "https://debug.example.com/order-fill",
+              blockHash: "debug-block-hash",
+              blockLink: "https://debug.example.com/block",
+              chainId: swapState.fromChain,
+              description: "Debug order fill transaction",
+            },
+            dstEscrowDeploy: {
+              txHash: "debug-dst-escrow-hash",
+              txLink: "https://debug.example.com/dst-escrow",
+              chainId: swapState.toChain,
+              description: "Debug destination escrow deployment",
+            },
           },
-          (key, value) => (typeof value === "bigint" ? value.toString() : value)
-        ),
-        signal: controller.signal,
-      });
+          status: "escrow_deployed",
+          message: "Debug mode: Escrow contracts deployed on both chains",
+        };
+        console.log("🐛 DEBUG MODE: Mock response generated:", resultBody);
+      } else {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-      clearTimeout(timeoutId);
+        const response = await fetch("/api/order", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(
+            {
+              order: order.order,
+              swapState: swapState,
+              signature: signature,
+              immutables: immutables,
+              hashLock: hashLock,
+              orderHash: orderHash,
+              orderBuild: orderBuild,
+              takerTraits: takerTraits,
+              srcSafetyDeposit: srcSafetyDeposit,
+            },
+            (key, value) =>
+              typeof value === "bigint" ? value.toString() : value
+          ),
+          signal: controller.signal,
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        resultBody = await response.json();
       }
-
-      const resultBody = await response.json();
 
       console.log("✅ Exchange initiated successfully!");
       console.log("📊 Transaction details:", {
@@ -391,42 +475,87 @@ export default function RealSwapComponent() {
       );
       localStorage.setItem("orders", JSON.stringify(withdrawOrders));
 
-      const secretRevealController = new AbortController();
-      const secretRevealTimeoutId = setTimeout(
-        () => secretRevealController.abort(),
-        60000
-      );
+      let secretRevealResult: any;
 
-      const secretRevealResponse = await fetch("/api/order/secret-reveal", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(
-          {
-            order: order.order,
-            swapState: swapState,
-            signature: signature,
-            secret: secret,
-            srcEscrowEvent: responseData.srcEscrowEvent,
-            dstDeployedAt: responseData.dstDeployedAt,
-            dstImmutablesData: responseData.dstImmutablesData,
-            dstImmutablesHash: responseData.dstImmutablesHash,
-            srcImmutablesHash: responseData.srcImmutablesHash,
-            srcImmutablesData: responseData.srcImmutablesData,
+      if (DEBUG_MODE) {
+        console.log("🐛 DEBUG MODE: Skipping /api/order/secret-reveal call");
+        console.log("🐛 DEBUG MODE: Secret reveal data that would be sent:", {
+          order: order.order,
+          swapState: swapState,
+          signature: signature,
+          secret: secret,
+          srcEscrowEvent: responseData.srcEscrowEvent,
+          dstDeployedAt: responseData.dstDeployedAt,
+          dstImmutablesData: responseData.dstImmutablesData,
+          dstImmutablesHash: responseData.dstImmutablesHash,
+          srcImmutablesHash: responseData.srcImmutablesHash,
+          srcImmutablesData: responseData.srcImmutablesData,
+        });
+
+        // Mock secret reveal response for debugging
+        secretRevealResult = {
+          transactions: {
+            dstWithdraw: {
+              txHash: "debug-dst-withdraw-hash",
+              txLink: "https://debug.example.com/dst-withdraw",
+              chainId: swapState.toChain,
+              description: "Debug destination withdrawal",
+            },
+            srcWithdraw: {
+              txHash: "debug-src-withdraw-hash",
+              txLink: "https://debug.example.com/src-withdraw",
+              chainId: swapState.fromChain,
+              description: "Debug source withdrawal",
+            },
           },
-          (key, value) => (typeof value === "bigint" ? value.toString() : value)
-        ),
-        signal: secretRevealController.signal,
-      });
+          status: "completed",
+          message: "Debug mode: Secret revelation and withdrawal completed",
+        };
+        console.log(
+          "🐛 DEBUG MODE: Mock secret reveal response:",
+          secretRevealResult
+        );
+      } else {
+        const secretRevealController = new AbortController();
+        const secretRevealTimeoutId = setTimeout(
+          () => secretRevealController.abort(),
+          60000
+        );
 
-      clearTimeout(secretRevealTimeoutId);
+        const secretRevealResponse = await fetch("/api/order/secret-reveal", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(
+            {
+              order: order.order,
+              swapState: swapState,
+              signature: signature,
+              secret: secret,
+              srcEscrowEvent: responseData.srcEscrowEvent,
+              dstDeployedAt: responseData.dstDeployedAt,
+              dstImmutablesData: responseData.dstImmutablesData,
+              dstImmutablesHash: responseData.dstImmutablesHash,
+              srcImmutablesHash: responseData.srcImmutablesHash,
+              srcImmutablesData: responseData.srcImmutablesData,
+            },
+            (key, value) =>
+              typeof value === "bigint" ? value.toString() : value
+          ),
+          signal: secretRevealController.signal,
+        });
 
-      if (!secretRevealResponse.ok) {
-        throw new Error(`Secret reveal failed: ${secretRevealResponse.status}`);
+        clearTimeout(secretRevealTimeoutId);
+
+        if (!secretRevealResponse.ok) {
+          throw new Error(
+            `Secret reveal failed: ${secretRevealResponse.status}`
+          );
+        }
+
+        secretRevealResult = await secretRevealResponse.json();
       }
-
-      const secretRevealResult = await secretRevealResponse.json();
       console.log("✅ Secret revelation completed!");
       console.log("📊 Withdrawal transaction details:", {
         dstWithdraw: secretRevealResult.transactions?.dstWithdraw?.txLink,
@@ -484,17 +613,57 @@ export default function RealSwapComponent() {
     return Number(formatUnits(balance.value, balance.decimals)).toFixed(4);
   };
 
+  const validateAmount = (
+    amount: string,
+    balance: { value: bigint; decimals: number } | undefined
+  ) => {
+    if (!amount || amount === "") return true; // Allow empty input
+    if (!balance) return false; // No balance data
+
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount < 0) return false;
+
+    const balanceAmount = Number(formatUnits(balance.value, balance.decimals));
+    return numAmount <= balanceAmount;
+  };
+
+  const handleAmountChange = (value: string) => {
+    // Allow empty string
+    if (value === "") {
+      setSwapState((prev) => ({ ...prev, fromAmount: "" }));
+      return;
+    }
+
+    // Allow only numbers and decimal point
+    if (!/^\d*\.?\d*$/.test(value)) return;
+
+    // Check if amount is valid
+    if (validateAmount(value, fromTokenBalance)) {
+      setSwapState((prev) => ({ ...prev, fromAmount: value }));
+    }
+  };
+
   return (
     <div className="w-md mx-auto bg-dark-800 rounded-2xl shadow-xl p-6 border border-dark-600">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-white">
           Real Cross-Chain Exchange
         </h2>
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <span className="text-sm text-gray-400">
-            {isConnected ? "Connected" : "Not Connected"}
-          </span>
+        <div className="flex items-center space-x-4">
+          {DEBUG_MODE && (
+            <div className="flex items-center space-x-2 bg-yellow-600 px-3 py-1 rounded-lg">
+              <div className="w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
+              <span className="text-sm text-yellow-100 font-medium">
+                DEBUG MODE
+              </span>
+            </div>
+          )}
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-sm text-gray-400">
+              {isConnected ? "Connected" : "Not Connected"}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -502,9 +671,17 @@ export default function RealSwapComponent() {
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
           <label className="text-sm font-medium text-gray-300">From</label>
-          <span className="text-sm text-gray-400">
-            Balance: {formatBalance(fromTokenBalance)}
-          </span>
+          <div className="flex flex-col items-end">
+            <span className="text-sm text-gray-400">
+              Balance: {formatBalance(fromTokenBalance)}
+            </span>
+            {swapState.fromAmount &&
+              !validateAmount(swapState.fromAmount, fromTokenBalance) && (
+                <span className="text-xs text-red-400 mt-1">
+                  Amount exceeds balance
+                </span>
+              )}
+          </div>
         </div>
 
         <div className="bg-dark-700 rounded-xl p-4 border border-dark-500">
@@ -601,10 +778,15 @@ export default function RealSwapComponent() {
             type="number"
             placeholder="0.0"
             value={swapState.fromAmount}
-            onChange={(e) =>
-              setSwapState((prev) => ({ ...prev, fromAmount: e.target.value }))
-            }
-            className="w-full bg-transparent text-2xl font-bold text-white outline-none"
+            onChange={(e) => handleAmountChange(e.target.value)}
+            min="0"
+            step="any"
+            className={`w-full bg-transparent text-2xl font-bold outline-none ${
+              swapState.fromAmount &&
+              !validateAmount(swapState.fromAmount, fromTokenBalance)
+                ? "text-red-400"
+                : "text-white"
+            }`}
           />
         </div>
       </div>
@@ -755,6 +937,10 @@ export default function RealSwapComponent() {
       ) : !swapState.fromAmount || !swapState.toAmount ? (
         <div className="w-full text-center py-3 px-6 bg-dark-600 text-gray-400 rounded-xl">
           Enter amounts to continue
+        </div>
+      ) : !validateAmount(swapState.fromAmount, fromTokenBalance) ? (
+        <div className="w-full text-center py-3 px-6 bg-red-600 text-white rounded-xl">
+          Amount exceeds balance
         </div>
       ) : needsApproval() ? (
         <button
