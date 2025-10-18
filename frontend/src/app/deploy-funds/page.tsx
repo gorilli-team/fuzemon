@@ -33,8 +33,8 @@ const networks: NetworkInfo[] = [
 ];
 
 export default function DeployFundsPage() {
-  const [activeTab, setActiveTab] = useState<"bridge" | "orders" | "real-swap">(
-    "orders"
+  const [activeTab, setActiveTab] = useState<"real-swap" | "bridge" | "orders">(
+    "real-swap"
   );
   const [fromNetwork, setFromNetwork] = useState<NetworkInfo>(networks[0]);
   const [toNetwork, setToNetwork] = useState<NetworkInfo>(networks[1]);
@@ -211,16 +211,6 @@ export default function DeployFundsPage() {
       <div className="mb-6">
         <div className="flex space-x-1 bg-dark-700 p-1 rounded-lg">
           <button
-            onClick={() => setActiveTab("orders")}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              activeTab === "orders"
-                ? "bg-accent-purple text-white"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Limit Orders
-          </button>
-          <button
             onClick={() => setActiveTab("real-swap")}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
               activeTab === "real-swap"
@@ -229,6 +219,16 @@ export default function DeployFundsPage() {
             }`}
           >
             Real Swap
+          </button>
+          <button
+            onClick={() => setActiveTab("orders")}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "orders"
+                ? "bg-accent-purple text-white"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            Limit Orders
           </button>
           <button
             onClick={() => setActiveTab("bridge")}

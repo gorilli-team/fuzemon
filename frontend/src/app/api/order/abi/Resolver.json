@@ -1,0 +1,106 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "struct ImmutablesData",
+          "name": "immutables",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes",
+          "name": "orderBuild",
+          "type": "bytes"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "r",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "vs",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "trait",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes",
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "name": "deploySrc",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "struct ImmutablesData",
+          "name": "immutables",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "privateCancellation",
+          "type": "uint256"
+        }
+      ],
+      "name": "deployDst",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "escrow",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "secret",
+          "type": "string"
+        },
+        {
+          "internalType": "struct ImmutablesData",
+          "name": "immutables",
+          "type": "tuple"
+        }
+      ],
+      "name": "withdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "escrow",
+          "type": "address"
+        },
+        {
+          "internalType": "struct ImmutablesData",
+          "name": "immutables",
+          "type": "tuple"
+        }
+      ],
+      "name": "cancel",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}

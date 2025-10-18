@@ -1,82 +1,177 @@
-// import { JsonRpcApiProvider } from "ethers";
+import { Address, EscrowFactory } from "@1inch/cross-chain-sdk";
+import { JsonRpcProvider } from "ethers";
 import { parseEther } from "viem";
+import { id } from "ethers";
 
-export interface ChainConfig {
-  ResolverContractAddress: string;
-  EscrowFactory: string;
-  LOP: string;
-  SafetyDeposit: bigint;
-  rpcUrl: string;
+// Helper functions for escrow implementation
+export async function getSourceImpl(
+  provider: JsonRpcProvider,
+  address: string
+) {
+  return Address.fromBigInt(
+    BigInt(
+      await provider.call({
+        to: address,
+        data: id("ESCROW_SRC_IMPLEMENTATION()").slice(0, 10),
+      })
+    )
+  );
 }
 
-export const ChainConfigs: Record<number, ChainConfig> = {
-  84532: {
-    // Base Sepolia
-    ResolverContractAddress: "0x3fe279B56F330304446522F04907fBBe03Fe236a", // Resolver
-    EscrowFactory: "0x178ddaca4499a89e40826ec247baf608051edf9e", // EscrowFactory
-    LOP: "0xe30f9abbadc1eb84b41d41035b2a2c7d0bd5f9b2", // AggregationRouterV6 (Limit Order Protocol)
+export async function getDestinationImpl(
+  provider: JsonRpcProvider,
+  address: string
+) {
+  return Address.fromBigInt(
+    BigInt(
+      await provider.call({
+        to: address,
+        data: id("ESCROW_DST_IMPLEMENTATION()").slice(0, 10),
+      })
+    )
+  );
+}
+
+// Simple Wallet class for transaction management
+export class Wallet {
+  provider: JsonRpcProvider;
+  signer: string;
+
+  constructor(privateKeyOrSigner: string, provider: JsonRpcProvider) {
+    this.provider = provider;
+    this.signer = privateKeyOrSigner;
+  }
+
+  async send(param: { to: string; data?: string; value?: bigint }): Promise<{
+    txHash: string;
+    blockTimestamp: bigint;
+    blockHash: string;
+  }> {
+    // Mock implementation for now - in real implementation, this would use the param
+    console.log("Sending transaction:", param);
+    return {
+      txHash: "0x" + Math.random().toString(16).substr(2, 64),
+      blockTimestamp: BigInt(Date.now()),
+      blockHash: "0x" + Math.random().toString(16).substr(2, 64),
+    };
+  }
+}
+
+export const ChainIds = {
+  Sepolia: 11155111,
+  BaseSepolia: 84532,
+  MonadTestnet: 10143,
+  EtherlinkTestnet: 128123,
+};
+
+export const ChainConfigs = {
+  [ChainIds.Sepolia]: {
+    LOP: "0x32a209c3736c5bd52e395eabc86b9bca4f602985",
+    EscrowFactory: "0x61a32a9263c6ff568c66799a94f8fe09c1db7a66",
+    ResolverContractAddress: "0xe002e8e986fd4bbff58b49423c7f7e0e0e92cc59",
+    BLT: "0x0BF8E91b08b242cD7380bC92385C90c8270b37f0",
+    EscrowSrcImplementationAddress:
+      "0xa17ddb01f03a42e0070a0e25099cf3d27b705fff",
+    EscrowDstImplementationAddress:
+      "0x7490329e69ab8e298a32dc59493034e4d02a5ccf",
+    TrueERC20: "0x6dFe5DA3C989aB142CfB16a8FfA2B0e640b1d821",
+    ChainName: "Sepolia",
+    RpcUrl: "https://ethereum-sepolia-rpc.publicnode.com",
+    ResolverPrivateKey: process.env.SEPOLIA_USER_PRIVATE_KEY,
     SafetyDeposit: parseEther("0.001"),
-    rpcUrl: "https://base-sepolia-rpc.publicnode.com",
   },
-  10143: {
-    // Monad Testnet
-    ResolverContractAddress: "0xb0CC0006662f91f7cEEf48eE444330f1B7A67D35", // Resolver
-    EscrowFactory: "0x65c169Cef9904499788FE61ea708EB6F99C34Ff6", // EscrowFactory
-    LOP: "0xCAEa711010565904d3427b74794e3F36c191a6e7", // AggregationRouterV6 (Limit Order Protocol)
+  [ChainIds.BaseSepolia]: {
+    LOP: "0xe30f9abbadc1eb84b41d41035b2a2c7d0bd5f9b2",
+    EscrowFactory: "0x178ddaca4499a89e40826ec247baf608051edf9e",
+    ResolverContractAddress: "0x3fe279B56F330304446522F04907fBBe03Fe236a",
+    BLT: "0xbb7f72d58f5F7147CBa030Ba4c46a94a07E4c2CA",
+    EscrowSrcImplementationAddress:
+      "0xe55061a78bf30e7f38410b90a6a167d5621cc068",
+    EscrowDstImplementationAddress:
+      "0x0418b6e80a602474fbfadc3a2594413fe68496bb",
+    TrueERC20: "0x8bD9f7C82eBF9D9C830a76bAcb0E99A52163B304",
+    ChainName: "BaseSepolia",
+    RpcUrl: "https://base-sepolia-rpc.publicnode.com",
+    ResolverPrivateKey: process.env.BASE_SEPOLIA_USER_PRIVATE_KEY,
     SafetyDeposit: parseEther("0.001"),
-    rpcUrl: "https://testnet-rpc.monad.xyz",
+  },
+  [ChainIds.EtherlinkTestnet]: {
+    LOP: "0x942DFf5Af350fd0816Bd03C91729633C293dB5dA",
+    EscrowFactory: "0x54B6335e1daEed822d2f06Bf5D5c97b7423e319d",
+    ResolverContractAddress: "0xa7c76ECE64a9c7ea863bb324a9451f903e1D0996",
+    BLT: "0xb84b2c6c0d554263Eab9f56DEeA8523347270A11",
+    EscrowSrcImplementationAddress:
+      "0xdb2c3b4de9e6943da03afaff9dacaee861eb7f39",
+    EscrowDstImplementationAddress:
+      "0xa16d7bc6b95a3ab7b2a2514cd58ddc18732aa74a",
+    TrueERC20: "0x8382515C25930D298e3B64Eb397005f9Ae71fc0C",
+    ChainName: "EtherlinkTestnet",
+    RpcUrl: "https://rpc.ankr.com/etherlink_testnet",
+    ResolverPrivateKey: process.env.ETHERLINK_TESTNET_USER_PRIVATE_KEY,
+    SafetyDeposit: parseEther("0.001"),
+  },
+  [ChainIds.MonadTestnet]: {
+    LOP: "0xFCf9F11666Adb060D03Bb873954673f90914bAdE",
+    EscrowFactory: "0xb84b2c6c0d554263Eab9f56DEeA8523347270A11",
+    ResolverContractAddress: "0x0642d9dE03A087588b39dBc844edE137e81f504E",
+    BLT: "0x60c13fAcC3d2363fa4c1D4c8A0456a4FeBc98903",
+    EscrowSrcImplementationAddress:
+      "0xb067a3695e316f4d6f42ef047cac941a3f0298f1",
+    EscrowDstImplementationAddress:
+      "0x4a2d6954c17ff9be4af9b0c9a74e2d0ff4cf128d",
+    TrueERC20: "0xE4F87948Efd25651CA20d8b0d750d94612f3FCB7",
+    ChainName: "MonadTestnet",
+    RpcUrl: "https://rpc.ankr.com/monad_testnet",
+    ResolverPrivateKey: process.env.MONAD_TESTNET_USER_PRIVATE_KEY,
+    SafetyDeposit: parseEther("0.001"),
   },
 };
 
 export const getChainResolver = (chainId: number) => {
-  const config = ChainConfigs[chainId];
-  if (!config) {
-    throw new Error(`Unsupported chain: ${chainId}`);
+  const chainConfig = ChainConfigs[chainId];
+  if (!chainConfig?.ResolverPrivateKey) {
+    throw new Error(`No resolver private key found for chain ${chainId}`);
   }
-
-  // This would be implemented with actual provider logic
-  return {
-    provider: null, // Placeholder - would use actual provider
-    send: async (txData: unknown) => {
-      // Placeholder - would implement actual transaction sending
-      console.log("Sending transaction:", txData);
-      return {
-        txHash: "0x" + Math.random().toString(16).substr(2, 64),
-        blockHash: "0x" + Math.random().toString(16).substr(2, 64),
-        blockTimestamp: Date.now(),
-      };
-    },
-  };
+  const provider = new JsonRpcProvider(chainConfig.RpcUrl);
+  // Set timeout for the provider
+  provider._getConnection().timeout = 30000; // 30 seconds timeout
+  return new Wallet(chainConfig.ResolverPrivateKey, provider);
 };
 
 export const getSrcEscrowAddress = async (
   chainId: number,
   immutablesHash: string
 ) => {
-  // Placeholder implementation - parameters kept for future use
-  console.log(
-    "Getting src escrow address for chain:",
-    chainId,
-    "hash:",
-    immutablesHash
+  const chainConfig = ChainConfigs[chainId];
+  const provider = new JsonRpcProvider(chainConfig.RpcUrl);
+  // Set timeout for the provider
+  provider._getConnection().timeout = 30000; // 30 seconds timeout
+  const ESCROW_SRC_IMPLEMENTATION = await getSourceImpl(
+    provider,
+    chainConfig.EscrowFactory
   );
-  return {
-    toString: () => "0x" + Math.random().toString(16).substr(2, 40),
-  };
+  return new EscrowFactory(
+    new Address(chainConfig.EscrowFactory)
+  ).getEscrowAddress(immutablesHash, ESCROW_SRC_IMPLEMENTATION);
 };
 
 export const getDstEscrowAddress = async (
-  chainId: number,
+  dstChainId: number,
   immutablesHash: string
 ) => {
-  // Placeholder implementation - parameters kept for future use
+  const chainConfig = ChainConfigs[dstChainId];
   console.log(
-    "Getting dst escrow address for chain:",
-    chainId,
-    "hash:",
-    immutablesHash
+    "🔍 Fetching destination escrow deployment event...",
+    chainConfig
   );
-  return {
-    toString: () => "0x" + Math.random().toString(16).substr(2, 40),
-  };
+  const provider = new JsonRpcProvider(chainConfig.RpcUrl);
+  // Set timeout for the provider
+  provider._getConnection().timeout = 30000; // 30 seconds timeout
+  const ESCROW_DST_IMPLEMENTATION = await getDestinationImpl(
+    provider,
+    chainConfig.EscrowFactory
+  );
+  return new EscrowFactory(
+    new Address(chainConfig.EscrowFactory)
+  ).getEscrowAddress(immutablesHash, ESCROW_DST_IMPLEMENTATION);
 };
