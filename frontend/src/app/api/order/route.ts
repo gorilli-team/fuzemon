@@ -67,6 +67,43 @@ export async function POST(request: Request) {
       dataIsEmpty: callData.data === "" || callData.data === "0x",
     });
 
+    // Debug order signature and validation
+    console.log("[DEBUG] Order signature validation:");
+    console.log("[DEBUG] Order hash:", orderHash);
+    console.log("[DEBUG] Signature:", signature);
+    console.log("[DEBUG] Order structure:", {
+      salt: order.salt?.toString(),
+      maker: order.maker?.toString(),
+      receiver: order.receiver?.toString(),
+      makerAsset: order.makerAsset?.toString(),
+      takerAsset: order.takerAsset?.toString(),
+      makingAmount: order.makingAmount?.toString(),
+      takingAmount: order.takingAmount?.toString(),
+      makerTraits: order.makerTraits?.toString(),
+    });
+    console.log("[DEBUG] Taker traits:", takerTraits);
+    console.log("[DEBUG] Fill amount:", fillAmount.toString());
+    console.log("[DEBUG] User address:", userAddress);
+    console.log("[DEBUG] Wallet address:", await srcChainResolver.getAddress());
+
+    // Check if order has already been filled
+    try {
+      console.log("[DEBUG] Checking if order has already been filled...");
+      // This would require checking the contract state or events
+      // For now, we'll log that we're proceeding with the order
+      console.log(
+        "[DEBUG] Proceeding with order execution (assuming not filled)"
+      );
+
+      // Suggestion: If this order keeps failing, try creating a fresh order
+      // with a new salt/nonce to ensure it hasn't been executed before
+      console.log(
+        "[DEBUG] NOTE: If this order fails repeatedly, try creating a fresh order with a new salt"
+      );
+    } catch (orderCheckError) {
+      console.log("[DEBUG] Could not check order status:", orderCheckError);
+    }
+
     console.log(
       `[API] Sending order fill transaction for user: ${userAddress}`
     );
