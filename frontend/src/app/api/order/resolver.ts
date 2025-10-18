@@ -51,8 +51,7 @@ export const deploySrcCallData = (
   // Structure immutables as a tuple object with named properties
   const immutablesTuple = {
     orderHash: orderHash, // orderHash (bytes32)
-    hashlock:
-      "0x0000000000000000000000000000000000000000000000000000000000000000", // hashlock (bytes32) - using default for now
+    hashlock: immutables.hashlock || hashLock.toString(), // Use the actual hashlock from immutables
     maker: addressToUint256(immutables.maker), // maker (uint256) - convert string address to BigInt
     taker: addressToUint256(immutables.taker), // taker (uint256) - convert string address to BigInt
     token: addressToUint256(immutables.token), // token (uint256) - convert string address to BigInt

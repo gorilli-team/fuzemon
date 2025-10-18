@@ -3,7 +3,7 @@
 import { Address, AmountMode, TakerTraits } from "@1inch/cross-chain-sdk";
 import { ArrowsUpDownIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
-import { formatUnits, hashTypedData, parseUnits } from "viem";
+import { formatUnits, parseUnits } from "viem";
 import {
   useAccount,
   useBalance,
@@ -277,9 +277,14 @@ export default function RealSwapComponent() {
 
       console.log("📦 Preparing order for submission...");
       const orderBuild = order.order.build();
-      const hashLock =
-        order.order.escrowExtension?.hashLockInfo ||
-        "0x0000000000000000000000000000000000000000000000000000000000000000";
+      // Get the hashlock that was used when creating the order
+      const hashLock = order.order.escrowExtension?.hashLockInfo;
+      console.log("Order hashlock:", hashLock);
+
+      if (!hashLock) {
+        console.error("CRITICAL: No hashlock found in order!");
+        throw new Error("Order hashlock is missing - cannot proceed with swap");
+      }
 
       // Get the order hash that was signed
       const orderHash = order.order.getOrderHash(swapState.fromChain);
@@ -292,21 +297,31 @@ export default function RealSwapComponent() {
         .encode();
 
       // Create immutables using the SAME order instance
-      const immutablesBuilder = order.order.toSrcImmutables(
-        swapState.fromChain,
-        new Address(
-          ChainConfigs[swapState.fromChain].ResolverContractAddress
-        ) as Address,
-        order.order.makingAmount,
-        hashLock
-      );
+      const immutables = order.order
+        .toSrcImmutables(
+          swapState.fromChain,
+          new Address(
+            ChainConfigs[swapState.fromChain].ResolverContractAddress
+          ) as Address,
+          order.order.makingAmount,
+          hashLock
+        )
+        .build();
 
-      // Build the immutables
-      const immutables = immutablesBuilder.build();
+      // The SDK might not be setting hashlock properly, so we need to manually set it
+      // Add this after building immutables:
+      if (!immutables.hashlock && hashLock) {
+        immutables.hashlock = hashLock.toString();
+      }
 
-      // Verify the hash matches
+      // Now verify both match
       console.log("Immutables orderHash:", immutables.orderHash);
       console.log("Hashes match:", orderHash === immutables.orderHash);
+      console.log("Immutables hashlock:", immutables.hashlock);
+      console.log(
+        "Hashlocks match:",
+        hashLock.toString() === immutables.hashlock
+      );
 
       // If they don't match, we have a problem with the SDK
       if (orderHash !== immutables.orderHash) {
@@ -314,6 +329,14 @@ export default function RealSwapComponent() {
         console.error("Order hash:", orderHash);
         console.error("Immutables hash:", immutables.orderHash);
         throw new Error("Order hash mismatch - cannot proceed with swap");
+      }
+
+      // Update the validation to compare string values
+      if (hashLock.toString() !== immutables.hashlock) {
+        console.error("CRITICAL: Hashlock mismatch!");
+        console.error("Order hashlock:", hashLock.toString());
+        console.error("Immutables hashlock:", immutables.hashlock);
+        throw new Error("Hashlock mismatch - cannot proceed with swap");
       }
       const srcSafetyDeposit = BigInt(
         order.order.escrowExtension?.srcSafetyDeposit || 0
@@ -335,7 +358,7 @@ export default function RealSwapComponent() {
             swapState: swapState,
             signature: signature,
             immutables: immutables,
-            hashLock: hashLock,
+            hashLock: hashLock.toString(), // Convert to string
             orderHash: orderHash, // Use the same orderHash variable
             orderBuild: orderBuild,
             takerTraits: takerTraits,

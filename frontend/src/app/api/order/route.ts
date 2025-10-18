@@ -331,7 +331,7 @@ export async function POST(request: Request) {
     let srcDeployBlock: string;
 
     try {
-      // ACTUALLY CALL sendTransaction - this is what was missing
+      // Use sendTransaction as the primary method
       console.log("[DEBUG] Calling sendTransaction...");
 
       // Try with explicit gas limit and ensure data is preserved
@@ -366,106 +366,24 @@ export async function POST(request: Request) {
 
       console.log(`[API] Order filled successfully: ${orderFillHash}`);
     } catch (sendError) {
-      console.error("[DEBUG] sendTransaction failed:", sendError);
+      console.error("[DEBUG] Transaction failed:", sendError);
 
-      // Only NOW try the contract interface approach
-      console.log("[DEBUG] Attempting contract interface approach...");
-      const contract = new Contract(
-        callData.to,
-        ResolverABI,
-        srcChainResolver.signer // Use signer, not srcChainResolver
+      // Don't try alternative methods - just return the error
+      // Handle BigInt serialization to prevent API crashes
+      return NextResponse.json(
+        {
+          error:
+            sendError instanceof Error
+              ? sendError.message
+              : "Transaction failed",
+          callData: JSON.parse(
+            JSON.stringify(callData, (key, value) =>
+              typeof value === "bigint" ? value.toString() : value
+            )
+          ),
+        },
+        { status: 500 }
       );
-
-      try {
-        console.log(
-          "[DEBUG] Contract interface approach - calling deploySrc..."
-        );
-
-        // Debug the parameters being passed to the contract
-        console.log("[DEBUG] Contract call parameters:", {
-          immutablesTuple: callData.immutablesTuple,
-          orderTuple: callData.orderTuple,
-          rHex: callData.rHex,
-          vsHex: callData.vsHex,
-          fillAmount: fillAmount.toString(),
-          trait: BigInt(
-            (takerTraits as { trait: string | number }).trait
-          ).toString(),
-          value: callData.value.toString(),
-        });
-
-        const tx = await contract.deploySrc(
-          callData.immutablesTuple,
-          callData.orderTuple,
-          callData.rHex,
-          callData.vsHex,
-          fillAmount,
-          BigInt((takerTraits as { trait: string | number }).trait),
-          "0x", // args - empty bytes
-          {
-            value: callData.value,
-            gasLimit: 500000, // Set explicit gas limit for contract call too
-          }
-        );
-
-        const receipt = await tx.wait();
-        if (!receipt) {
-          throw new Error("Transaction receipt is null");
-        }
-        orderFillHash = receipt.hash;
-        srcDeployBlock = receipt.blockHash;
-
-        console.log(
-          `[API] Order filled successfully via contract interface: ${orderFillHash}`
-        );
-      } catch (contractError) {
-        console.error("[DEBUG] Contract interface failed:", contractError);
-        console.log(
-          "[DEBUG] Attempting manual transaction building to bypass RPC data stripping..."
-        );
-
-        // Final fallback: Use wallet.send() method to bypass RPC data stripping
-        try {
-          console.log(
-            "[DEBUG] Using wallet.send() method to bypass RPC data stripping..."
-          );
-
-          console.log("[DEBUG] Call data being sent:", {
-            to: callData.to,
-            data: callData.data,
-            dataLength: callData.data.length,
-            value: callData.value.toString(),
-          });
-
-          // Use the wallet's send method which should preserve data
-          const result = await srcChainResolver.send({
-            to: callData.to,
-            data: callData.data,
-            value: callData.value,
-          });
-
-          orderFillHash = result.txHash;
-          srcDeployBlock = result.blockHash;
-
-          console.log(
-            `[API] Order filled successfully via wallet.send(): ${orderFillHash}`
-          );
-        } catch (walletError) {
-          console.error("[DEBUG] Wallet.send() also failed:", walletError);
-          console.error(`[API] All transaction methods failed:`, {
-            error:
-              walletError instanceof Error
-                ? walletError.message
-                : "Unknown error",
-            callData: {
-              to: callData.to,
-              data: callData.data,
-              value: callData.value.toString(),
-            },
-          });
-          throw walletError;
-        }
-      }
     }
 
     console.log(
