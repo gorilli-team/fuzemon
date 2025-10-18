@@ -92,44 +92,70 @@ export async function POST(request: Request) {
     let srcDeployBlock: string;
 
     try {
-      // Try using contract interface directly (simpler approach)
-      console.log("[DEBUG] Attempting contract interface approach...");
-
-      const contract = new Contract(callData.to, ResolverABI, srcChainResolver);
-
-      console.log("[DEBUG] Contract interface approach - calling deploySrc...");
-
-      const tx = await contract.deploySrc(
-        callData.immutablesTuple,
-        callData.orderTuple,
-        callData.rHex,
-        callData.vsHex,
-        fillAmount,
-        BigInt((takerTraits as { trait: string | number }).trait),
-        "0x", // args - empty bytes
-        { value: callData.value }
-      );
+      // ACTUALLY CALL sendTransaction - this is what was missing
+      console.log("[DEBUG] Calling sendTransaction...");
+      const tx = await srcChainResolver.signer.sendTransaction(txRequest);
+      console.log("[DEBUG] Transaction sent successfully:", tx.hash);
 
       const receipt = await tx.wait();
-      if (receipt) {
+      if (!receipt) {
+        throw new Error("Transaction receipt is null");
+      }
+      orderFillHash = receipt.hash;
+      srcDeployBlock = receipt.blockHash;
+
+      console.log(`[API] Order filled successfully: ${orderFillHash}`);
+    } catch (sendError) {
+      console.error("[DEBUG] sendTransaction failed:", sendError);
+
+      // Only NOW try the contract interface approach
+      console.log("[DEBUG] Attempting contract interface approach...");
+      const contract = new Contract(
+        callData.to,
+        ResolverABI,
+        srcChainResolver.signer // Use signer, not srcChainResolver
+      );
+
+      try {
+        console.log(
+          "[DEBUG] Contract interface approach - calling deploySrc..."
+        );
+        const tx = await contract.deploySrc(
+          callData.immutablesTuple,
+          callData.orderTuple,
+          callData.rHex,
+          callData.vsHex,
+          fillAmount,
+          BigInt((takerTraits as { trait: string | number }).trait),
+          "0x", // args - empty bytes
+          { value: callData.value }
+        );
+
+        const receipt = await tx.wait();
+        if (!receipt) {
+          throw new Error("Transaction receipt is null");
+        }
         orderFillHash = receipt.hash;
         srcDeployBlock = receipt.blockHash;
+
         console.log(
           `[API] Order filled successfully via contract interface: ${orderFillHash}`
         );
-      } else {
-        throw new Error("Transaction receipt is null");
+      } catch (contractError) {
+        console.error("[DEBUG] Contract interface failed:", contractError);
+        console.error(`[API] Transaction failed:`, {
+          error:
+            contractError instanceof Error
+              ? contractError.message
+              : "Unknown error",
+          callData: {
+            to: callData.to,
+            data: callData.data,
+            value: callData.value.toString(),
+          },
+        });
+        throw contractError;
       }
-    } catch (error) {
-      console.error(`[API] Transaction failed:`, {
-        error: error instanceof Error ? error.message : "Unknown error",
-        callData: {
-          to: callData.to,
-          data: callData.data,
-          value: callData.value.toString(),
-        },
-      });
-      throw error;
     }
 
     console.log(
