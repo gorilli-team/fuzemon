@@ -1,7 +1,6 @@
 import express, { Application } from "express";
 import cors from "cors";
 import helmet from "helmet";
-import morgan from "morgan";
 import { errorHandler, notFound } from "./middleware/errorHandler";
 import orderRoutes from "./routes/orderRoutes";
 
@@ -30,13 +29,6 @@ app.use(
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// Logging middleware
-if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev"));
-} else {
-  app.use(morgan("combined"));
-}
 
 // Health check endpoint
 app.get("/health", (req, res) => {
