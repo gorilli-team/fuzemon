@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import OpenOrders from "../components/OpenOrders";
+import TokenHoldings from "../components/TokenHoldings";
 import { Order, SwapState, Token } from "../types/order";
 
 interface NetworkInfo {
@@ -402,6 +403,9 @@ export default function DeployFundsPage() {
       {/* Limit Orders Interface */}
       {activeTab === "orders" && (
         <div className="space-y-6">
+          {/* Token Holdings */}
+          <TokenHoldings />
+
           {/* Create Limit Order Form */}
           <div className="bg-dark-800 rounded-lg p-6">
             <h2 className="text-xl font-semibold text-white mb-6">
