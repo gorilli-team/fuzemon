@@ -56,6 +56,8 @@ export const ChainConfigs = {
       "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", // Infura
       "https://eth-sepolia.g.alchemy.com/v2/demo", // Alchemy
       "https://rpc.sepolia.org", // Sepolia Foundation
+      "https://ethereum-sepolia.blockpi.network/v1/rpc/public", // BlockPI
+      "https://sepolia.drpc.org", // DRPC
     ],
     ResolverPrivateKey: process.env.SEPOLIA_USER_PRIVATE_KEY,
     SafetyDeposit: parseEther("0.0001"), // Reduced from 0.001 to 0.0001 ETH

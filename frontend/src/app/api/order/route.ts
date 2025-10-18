@@ -12,6 +12,9 @@ import ResolverABI from "./abi/Resolver.json";
 
 export async function POST(request: Request) {
   try {
+    const requestBody = await request.json();
+    console.log("[DEBUG] Raw request body keys:", Object.keys(requestBody));
+
     const {
       order,
       swapState,
@@ -23,9 +26,17 @@ export async function POST(request: Request) {
       takerTraits,
       srcSafetyDeposit,
       userAddress, // Add user address to ensure same user control
-    } = await request.json();
+    } = requestBody;
 
     console.log(`[API] Starting cross-chain exchange for user: ${userAddress}`);
+
+    // Debug what we actually received
+    console.log("[DEBUG] Received order object:", order);
+    console.log("[DEBUG] Received orderBuild:", orderBuild);
+    console.log("[DEBUG] Received orderHash:", orderHash);
+    console.log("[DEBUG] Received signature:", signature);
+    console.log("[DEBUG] Received immutables:", immutables);
+    console.log("[DEBUG] Received takerTraits:", takerTraits);
 
     const resolverContract = new Resolver(
       ChainConfigs[swapState.fromChain].ResolverContractAddress,
@@ -46,13 +57,85 @@ export async function POST(request: Request) {
 
     const fillAmount = order.inner.inner.makingAmount;
 
+    // Check if we have a valid order object, if not use orderBuild
+    let orderToUse = order;
+    if (!order || Object.keys(order).length === 0) {
+      console.log(
+        "[DEBUG] Order object is empty/undefined, using orderBuild instead"
+      );
+      orderToUse = orderBuild;
+    }
+
+    // CRITICAL: Validate order hash consistency to prevent signature mismatch
+    let finalOrderHash: string;
+
+    // First, try to compute the order hash from the order object
+    let computedOrderHash: string | null = null;
+    try {
+      if (order && order.getOrderHash) {
+        computedOrderHash = order.getOrderHash(swapState.fromChain);
+        console.log(
+          "[DEBUG] Computed order hash from order object:",
+          computedOrderHash
+        );
+      } else if (orderToUse && orderToUse.getOrderHash) {
+        computedOrderHash = orderToUse.getOrderHash(swapState.fromChain);
+        console.log(
+          "[DEBUG] Computed order hash from orderToUse:",
+          computedOrderHash
+        );
+      }
+    } catch (hashError) {
+      console.log(
+        "[DEBUG] Could not compute order hash from order object:",
+        hashError
+      );
+    }
+
+    // Determine which order hash to use based on consistency
+    if (computedOrderHash && orderHash && computedOrderHash === orderHash) {
+      // Perfect match - signature was created for this order hash
+      finalOrderHash = orderHash;
+      console.log(
+        "[DEBUG] ✅ Order hash validation passed - using received orderHash:",
+        finalOrderHash
+      );
+    } else if (
+      computedOrderHash &&
+      immutables.orderHash &&
+      computedOrderHash === immutables.orderHash
+    ) {
+      // Order hash matches immutables - use immutables orderHash
+      finalOrderHash = immutables.orderHash;
+      console.log(
+        "[DEBUG] ✅ Order hash matches immutables - using immutables orderHash:",
+        finalOrderHash
+      );
+    } else {
+      // Mismatch detected - this will likely cause transaction to revert
+      console.error("[CRITICAL] Order hash mismatch detected!");
+      console.error("[CRITICAL] Received orderHash:", orderHash);
+      console.error("[CRITICAL] Computed orderHash:", computedOrderHash);
+      console.error("[CRITICAL] Immutables orderHash:", immutables.orderHash);
+      console.error(
+        "[CRITICAL] This will cause transaction to revert due to signature mismatch!"
+      );
+
+      // Use the computed hash if available, otherwise use immutables
+      finalOrderHash = computedOrderHash || immutables.orderHash;
+      console.log(
+        "[DEBUG] Using computed order hash as fallback:",
+        finalOrderHash
+      );
+    }
+
     const callData = deploySrcCallData(
       ChainConfigs[swapState.fromChain].ResolverContractAddress,
       signature,
       immutables,
       takerTraits,
       fillAmount,
-      orderHash,
+      finalOrderHash, // Use the corrected order hash
       hashLock,
       orderBuild,
       srcSafetyDeposit
@@ -69,18 +152,69 @@ export async function POST(request: Request) {
 
     // Debug order signature and validation
     console.log("[DEBUG] Order signature validation:");
-    console.log("[DEBUG] Order hash:", orderHash);
+    console.log("[DEBUG] Received orderHash:", orderHash);
     console.log("[DEBUG] Signature:", signature);
-    console.log("[DEBUG] Order structure:", {
-      salt: order.salt?.toString(),
-      maker: order.maker?.toString(),
-      receiver: order.receiver?.toString(),
-      makerAsset: order.makerAsset?.toString(),
-      takerAsset: order.takerAsset?.toString(),
-      makingAmount: order.makingAmount?.toString(),
-      takingAmount: order.takingAmount?.toString(),
-      makerTraits: order.makerTraits?.toString(),
-    });
+    console.log("[DEBUG] Final order hash being used:", finalOrderHash);
+
+    // CRITICAL: Validate that the signature matches the order being executed
+    if (finalOrderHash !== orderHash) {
+      console.error("[CRITICAL] SIGNATURE MISMATCH DETECTED!");
+      console.error(
+        "[CRITICAL] The signature was created for orderHash:",
+        orderHash
+      );
+      console.error(
+        "[CRITICAL] But we're trying to execute with orderHash:",
+        finalOrderHash
+      );
+      console.error("[CRITICAL] This will cause the transaction to revert!");
+      console.error(
+        "[CRITICAL] The smart contract will reject this as an invalid signature!"
+      );
+
+      // This is a critical error - the transaction will fail
+      throw new Error(
+        `Signature mismatch: signature was created for orderHash ${orderHash} but trying to execute with ${finalOrderHash}`
+      );
+    }
+
+    // Fix: Access the nested order structure with proper object handling
+    let orderStructure = {};
+    if (orderToUse && orderToUse.inner && orderToUse.inner.inner) {
+      orderStructure = {
+        salt: orderToUse.inner.inner._salt?.toString(),
+        maker:
+          orderToUse.inner.inner.maker?.val?.toString() ||
+          orderToUse.inner.inner.maker?.toString(),
+        receiver:
+          orderToUse.inner.inner.receiver?.val?.toString() ||
+          orderToUse.inner.inner.receiver?.toString(),
+        makerAsset:
+          orderToUse.inner.inner.makerAsset?.val?.toString() ||
+          orderToUse.inner.inner.makerAsset?.toString(),
+        takerAsset:
+          orderToUse.inner.inner.takerAsset?.val?.toString() ||
+          orderToUse.inner.inner.takerAsset?.toString(),
+        makingAmount: orderToUse.inner.inner.makingAmount?.toString(),
+        takingAmount: orderToUse.inner.inner.takingAmount?.toString(),
+        makerTraits:
+          orderToUse.inner.inner.makerTraits?.val?.toString() ||
+          orderToUse.inner.inner.makerTraits?.toString(),
+      };
+    } else {
+      orderStructure = {
+        salt: orderToUse?.salt?.toString(),
+        maker: orderToUse?.maker?.toString(),
+        receiver: orderToUse?.receiver?.toString(),
+        makerAsset: orderToUse?.makerAsset?.toString(),
+        takerAsset: orderToUse?.takerAsset?.toString(),
+        makingAmount: orderToUse?.makingAmount?.toString(),
+        takingAmount: orderToUse?.takingAmount?.toString(),
+        makerTraits: orderToUse?.makerTraits?.toString(),
+      };
+    }
+
+    console.log("[DEBUG] Order structure:", orderStructure);
     console.log("[DEBUG] Taker traits:", takerTraits);
     console.log("[DEBUG] Fill amount:", fillAmount.toString());
     console.log("[DEBUG] User address:", userAddress);
@@ -200,11 +334,23 @@ export async function POST(request: Request) {
       // ACTUALLY CALL sendTransaction - this is what was missing
       console.log("[DEBUG] Calling sendTransaction...");
 
-      // Try with explicit gas limit to bypass estimation issues
+      // Try with explicit gas limit and ensure data is preserved
       const txRequestWithGas = {
-        ...txRequest,
+        to: txRequest.to,
+        data: txRequest.data,
+        value: txRequest.value,
         gasLimit: 500000, // Set explicit gas limit
+        type: 2, // EIP-1559 transaction
       };
+
+      console.log("[DEBUG] Final transaction request:", {
+        to: txRequestWithGas.to,
+        data: txRequestWithGas.data,
+        dataLength: txRequestWithGas.data.length,
+        value: txRequestWithGas.value.toString(),
+        gasLimit: txRequestWithGas.gasLimit,
+        type: txRequestWithGas.type,
+      });
 
       const tx = await srcChainResolver.signer.sendTransaction(
         txRequestWithGas
@@ -274,18 +420,51 @@ export async function POST(request: Request) {
         );
       } catch (contractError) {
         console.error("[DEBUG] Contract interface failed:", contractError);
-        console.error(`[API] Transaction failed:`, {
-          error:
-            contractError instanceof Error
-              ? contractError.message
-              : "Unknown error",
-          callData: {
+        console.log(
+          "[DEBUG] Attempting manual transaction building to bypass RPC data stripping..."
+        );
+
+        // Final fallback: Use wallet.send() method to bypass RPC data stripping
+        try {
+          console.log(
+            "[DEBUG] Using wallet.send() method to bypass RPC data stripping..."
+          );
+
+          console.log("[DEBUG] Call data being sent:", {
             to: callData.to,
             data: callData.data,
+            dataLength: callData.data.length,
             value: callData.value.toString(),
-          },
-        });
-        throw contractError;
+          });
+
+          // Use the wallet's send method which should preserve data
+          const result = await srcChainResolver.send({
+            to: callData.to,
+            data: callData.data,
+            value: callData.value,
+          });
+
+          orderFillHash = result.txHash;
+          srcDeployBlock = result.blockHash;
+
+          console.log(
+            `[API] Order filled successfully via wallet.send(): ${orderFillHash}`
+          );
+        } catch (walletError) {
+          console.error("[DEBUG] Wallet.send() also failed:", walletError);
+          console.error(`[API] All transaction methods failed:`, {
+            error:
+              walletError instanceof Error
+                ? walletError.message
+                : "Unknown error",
+            callData: {
+              to: callData.to,
+              data: callData.data,
+              value: callData.value.toString(),
+            },
+          });
+          throw walletError;
+        }
       }
     }
 

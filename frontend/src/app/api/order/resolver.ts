@@ -27,21 +27,35 @@ export const deploySrcCallData = (
 
   const { r, yParityAndS: vs } = Signature.from(signature);
 
-  // Ensure r and vs are proper hex strings
+  // Ensure r and vs are proper 32-byte hex strings (bytes32)
   const rHex =
     typeof r === "string" ? r : (r as { toString(): string }).toString();
   const vsHex =
     typeof vs === "string" ? vs : (vs as { toString(): string }).toString();
+
+  // Validate that r and vs are proper 32-byte hex strings
+  if (!rHex.startsWith("0x") || rHex.length !== 66) {
+    throw new Error(`Invalid r value: ${rHex} (expected 32-byte hex string)`);
+  }
+  if (!vsHex.startsWith("0x") || vsHex.length !== 66) {
+    throw new Error(`Invalid vs value: ${vsHex} (expected 32-byte hex string)`);
+  }
   const { trait } = takerTraits as { args: unknown; trait: unknown };
+
+  // Helper function to convert address string to uint256 BigInt
+  const addressToUint256 = (addr: string): bigint => {
+    if (!addr.startsWith("0x")) throw new Error(`Invalid address: ${addr}`);
+    return BigInt(addr);
+  };
 
   // Structure immutables as a tuple object with named properties
   const immutablesTuple = {
     orderHash: orderHash, // orderHash (bytes32)
     hashlock:
       "0x0000000000000000000000000000000000000000000000000000000000000000", // hashlock (bytes32) - using default for now
-    maker: BigInt(immutables.maker.toString()), // maker (uint256)
-    taker: BigInt(immutables.taker.toString()), // taker (uint256)
-    token: BigInt(immutables.token.toString()), // token (uint256)
+    maker: addressToUint256(immutables.maker), // maker (uint256) - convert string address to BigInt
+    taker: addressToUint256(immutables.taker), // taker (uint256) - convert string address to BigInt
+    token: addressToUint256(immutables.token), // token (uint256) - convert string address to BigInt
     amount: BigInt(immutables.amount), // amount (uint256)
     safetyDeposit: BigInt(immutables.safetyDeposit), // safetyDeposit (uint256)
     timelocks: BigInt(immutables.timelocks), // timelocks (uint256)
@@ -62,10 +76,10 @@ export const deploySrcCallData = (
   // Ensure all values are properly converted to BigInt, handling Address objects
   const orderTuple = {
     salt: BigInt(order.salt), // salt (uint256)
-    maker: BigInt(order.maker.toString()), // maker (uint256)
-    receiver: BigInt(order.receiver.toString()), // receiver (uint256)
-    makerAsset: BigInt(order.makerAsset.toString()), // makerAsset (uint256)
-    takerAsset: BigInt(order.takerAsset.toString()), // takerAsset (uint256)
+    maker: addressToUint256(order.maker.toString()), // maker (uint256) - convert address to BigInt
+    receiver: addressToUint256(order.receiver.toString()), // receiver (uint256) - convert address to BigInt
+    makerAsset: addressToUint256(order.makerAsset.toString()), // makerAsset (uint256) - convert address to BigInt
+    takerAsset: addressToUint256(order.takerAsset.toString()), // takerAsset (uint256) - convert address to BigInt
     makingAmount: BigInt(order.makingAmount), // makingAmount (uint256)
     takingAmount: BigInt(order.takingAmount), // takingAmount (uint256)
     makerTraits: BigInt(order.makerTraits), // makerTraits (uint256)
