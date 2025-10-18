@@ -2,6 +2,7 @@ import { Address, EscrowFactory } from "@1inch/cross-chain-sdk";
 import { JsonRpcProvider } from "ethers";
 import { parseEther } from "viem";
 import { id } from "ethers";
+import { Wallet } from "../api/order/wallet";
 
 // Helper functions for escrow implementation
 export async function getSourceImpl(
@@ -30,31 +31,6 @@ export async function getDestinationImpl(
       })
     )
   );
-}
-
-// Simple Wallet class for transaction management
-export class Wallet {
-  provider: JsonRpcProvider;
-  signer: string;
-
-  constructor(privateKeyOrSigner: string, provider: JsonRpcProvider) {
-    this.provider = provider;
-    this.signer = privateKeyOrSigner;
-  }
-
-  async send(param: { to: string; data?: string; value?: bigint }): Promise<{
-    txHash: string;
-    blockTimestamp: bigint;
-    blockHash: string;
-  }> {
-    // Mock implementation for now - in real implementation, this would use the param
-    console.log("Sending transaction:", param);
-    return {
-      txHash: "0x" + Math.random().toString(16).substr(2, 64),
-      blockTimestamp: BigInt(Date.now()),
-      blockHash: "0x" + Math.random().toString(16).substr(2, 64),
-    };
-  }
 }
 
 export const ChainIds = {
@@ -127,15 +103,58 @@ export const ChainConfigs = {
   },
 };
 
-export const getChainResolver = (chainId: number) => {
+// Store the authorized user address for each chain
+const authorizedUsers = new Map<number, string>();
+
+export const getChainResolver = (chainId: number, userAddress?: string) => {
   const chainConfig = ChainConfigs[chainId];
   if (!chainConfig?.ResolverPrivateKey) {
     throw new Error(`No resolver private key found for chain ${chainId}`);
   }
+
   const provider = new JsonRpcProvider(chainConfig.RpcUrl);
   // Set timeout for the provider
   provider._getConnection().timeout = 30000; // 30 seconds timeout
-  return new Wallet(chainConfig.ResolverPrivateKey, provider);
+
+  const wallet = new Wallet(chainConfig.ResolverPrivateKey, provider);
+
+  // If this is the first time or userAddress is provided, validate and store the authorized user
+  if (userAddress) {
+    // Validate that the userAddress matches the private key owner
+    wallet.getAddress().then((privateKeyOwnerAddress) => {
+      if (privateKeyOwnerAddress.toLowerCase() !== userAddress.toLowerCase()) {
+        throw new Error(
+          `Unauthorized: User ${userAddress} does not own the private key. Expected: ${privateKeyOwnerAddress}`
+        );
+      }
+      // Store the authorized user for this chain
+      authorizedUsers.set(chainId, userAddress.toLowerCase());
+    });
+  } else {
+    // Check if we already have an authorized user for this chain
+    const existingUser = authorizedUsers.get(chainId);
+    if (existingUser) {
+      console.log(
+        `Using authorized user for chain ${chainId}: ${existingUser}`
+      );
+    }
+  }
+
+  return wallet;
+};
+
+// Function to get the authorized user for a chain
+export const getAuthorizedUser = (chainId: number): string | null => {
+  return authorizedUsers.get(chainId) || null;
+};
+
+// Function to clear authorization (useful for logout)
+export const clearUserAuthorization = (chainId?: number) => {
+  if (chainId) {
+    authorizedUsers.delete(chainId);
+  } else {
+    authorizedUsers.clear();
+  }
 };
 
 export const getSrcEscrowAddress = async (

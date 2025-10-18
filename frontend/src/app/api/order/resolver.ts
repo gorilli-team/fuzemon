@@ -2,6 +2,9 @@ import * as Sdk from "@1inch/cross-chain-sdk";
 import { Interface, Signature } from "ethers";
 import ResolverABI from "./abi/Resolver.json";
 
+// Use the actual Resolver ABI from the JSON file
+const RESOLVER_ABI = ResolverABI;
+
 export const deploySrcCallData = (
   srcAddress: string,
   signature: string,
@@ -62,8 +65,6 @@ export const withdrawCallData = (
     ]),
   };
 };
-// Use the actual Resolver ABI from the JSON file
-const RESOLVER_ABI = ResolverABI.abi;
 
 // Use SDK types instead of custom interfaces
 type TransactionData = {

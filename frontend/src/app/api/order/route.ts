@@ -19,9 +19,11 @@ export async function POST(request: Request) {
     orderBuild,
     takerTraits,
     srcSafetyDeposit,
+    userAddress, // Add user address to ensure same user control
   } = await request.json();
 
   console.log("🚀 Starting cross-chain exchange process...");
+  console.log("👤 User address:", userAddress);
 
   const resolverContract = new Resolver(
     ChainConfigs[swapState.fromChain].ResolverContractAddress,
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
   );
 
   // The order data should contain the necessary properties
-  const srcChainResolver = getChainResolver(swapState.fromChain);
+  const srcChainResolver = getChainResolver(swapState.fromChain, userAddress);
 
   const fillAmount = order.inner.inner.makingAmount;
   const { txHash: orderFillHash, blockHash: srcDeployBlock } =
@@ -60,7 +62,7 @@ export async function POST(request: Request) {
     .withTaker(new Address(resolverContract.dstAddress));
 
   console.log("🏗️ Deploying destination escrow...");
-  const dstChainResolver = getChainResolver(swapState.toChain);
+  const dstChainResolver = getChainResolver(swapState.toChain, userAddress);
   const { txHash: dstDepositHash, blockTimestamp: dstDeployedAt } =
     await dstChainResolver.send(
       resolverContract.deployDst(dstImmutables as Immutables)

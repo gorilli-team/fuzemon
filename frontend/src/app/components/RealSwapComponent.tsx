@@ -320,6 +320,7 @@ export default function RealSwapComponent() {
             orderBuild: orderBuild,
             takerTraits: takerTraits,
             srcSafetyDeposit: srcSafetyDeposit,
+            userAddress: address, // Add user address to ensure same user control
           },
           (key, value) => (typeof value === "bigint" ? value.toString() : value)
         ),
@@ -415,6 +416,7 @@ export default function RealSwapComponent() {
             dstImmutablesHash: responseData.dstImmutablesHash,
             srcImmutablesHash: responseData.srcImmutablesHash,
             srcImmutablesData: responseData.srcImmutablesData,
+            userAddress: address, // Add user address to ensure same user control
           },
           (key, value) => (typeof value === "bigint" ? value.toString() : value)
         ),
