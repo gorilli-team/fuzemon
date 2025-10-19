@@ -13,17 +13,12 @@ export const SmartWalletAbi = [
         internalType: "address",
       },
       {
+        name: "factoryV2",
+        type: "address",
+        internalType: "address",
+      },
+      {
         name: "router",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "poolManager",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "permit2",
         type: "address",
         internalType: "address",
       },
@@ -31,62 +26,21 @@ export const SmartWalletAbi = [
     stateMutability: "nonpayable",
   },
   {
-    type: "receive",
-    stateMutability: "payable",
-  },
-  {
     type: "function",
-    name: "buyTokensV4",
+    name: "buyTokens",
     inputs: [
       {
-        name: "key",
-        type: "tuple",
-        internalType: "struct PoolKey",
-        components: [
-          {
-            name: "currency0",
-            type: "address",
-            internalType: "Currency",
-          },
-          {
-            name: "currency1",
-            type: "address",
-            internalType: "Currency",
-          },
-          {
-            name: "fee",
-            type: "uint24",
-            internalType: "uint24",
-          },
-          {
-            name: "tickSpacing",
-            type: "int24",
-            internalType: "int24",
-          },
-          {
-            name: "hooks",
-            type: "address",
-            internalType: "contract IHooks",
-          },
-        ],
-      },
-      {
-        name: "zeroForOne",
-        type: "bool",
-        internalType: "bool",
+        name: "tokenOut",
+        type: "address",
+        internalType: "address",
       },
       {
         name: "amountOut",
-        type: "uint128",
-        internalType: "uint128",
+        type: "uint256",
+        internalType: "uint256",
       },
       {
         name: "amountInMax",
-        type: "uint128",
-        internalType: "uint128",
-      },
-      {
-        name: "deadline",
         type: "uint256",
         internalType: "uint256",
       },
@@ -109,6 +63,19 @@ export const SmartWalletAbi = [
   },
   {
     type: "function",
+    name: "i_factoryV2",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "i_owner",
     inputs: [],
     outputs: [
@@ -122,39 +89,13 @@ export const SmartWalletAbi = [
   },
   {
     type: "function",
-    name: "i_permit2",
-    inputs: [],
-    outputs: [
-      {
-        name: "",
-        type: "address",
-        internalType: "contract IPermit2",
-      },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "i_poolManager",
-    inputs: [],
-    outputs: [
-      {
-        name: "",
-        type: "address",
-        internalType: "contract IPoolManager",
-      },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
     name: "i_router",
     inputs: [],
     outputs: [
       {
         name: "",
         type: "address",
-        internalType: "contract IUniversalRouter",
+        internalType: "address",
       },
     ],
     stateMutability: "view",
@@ -167,103 +108,29 @@ export const SmartWalletAbi = [
       {
         name: "",
         type: "address",
-        internalType: "contract IERC20",
-      },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "s_isOperator",
-    inputs: [
-      {
-        name: "",
-        type: "address",
         internalType: "address",
       },
     ],
-    outputs: [
-      {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
-    ],
     stateMutability: "view",
   },
   {
     type: "function",
-    name: "sellTokensV4",
+    name: "sellTokens",
     inputs: [
       {
-        name: "key",
-        type: "tuple",
-        internalType: "struct PoolKey",
-        components: [
-          {
-            name: "currency0",
-            type: "address",
-            internalType: "Currency",
-          },
-          {
-            name: "currency1",
-            type: "address",
-            internalType: "Currency",
-          },
-          {
-            name: "fee",
-            type: "uint24",
-            internalType: "uint24",
-          },
-          {
-            name: "tickSpacing",
-            type: "int24",
-            internalType: "int24",
-          },
-          {
-            name: "hooks",
-            type: "address",
-            internalType: "contract IHooks",
-          },
-        ],
-      },
-      {
-        name: "zeroForOne",
-        type: "bool",
-        internalType: "bool",
+        name: "tokenIn",
+        type: "address",
+        internalType: "address",
       },
       {
         name: "amountIn",
-        type: "uint128",
-        internalType: "uint128",
-      },
-      {
-        name: "amountOutMin",
-        type: "uint128",
-        internalType: "uint128",
-      },
-      {
-        name: "deadline",
         type: "uint256",
         internalType: "uint256",
       },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "setOperator",
-    inputs: [
       {
-        name: "operator",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "authorized",
-        type: "bool",
-        internalType: "bool",
+        name: "amountOutMin",
+        type: "uint256",
+        internalType: "uint256",
       },
     ],
     outputs: [],
@@ -291,59 +158,52 @@ export const SmartWalletAbi = [
   },
   {
     type: "event",
-    name: "AuthorizeOperator",
+    name: "BuyTokens",
     inputs: [
       {
         name: "smartWallet",
         type: "address",
         indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "pair",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "tokenIn",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+      {
+        name: "tokenOut",
+        type: "address",
+        indexed: false,
         internalType: "address",
       },
       {
         name: "operator",
         type: "address",
-        indexed: true,
-        internalType: "address",
-      },
-      {
-        name: "authorized",
-        type: "bool",
         indexed: false,
-        internalType: "bool",
-      },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "BuyTokensV4",
-    inputs: [
-      {
-        name: "smartWallet",
-        type: "address",
-        indexed: true,
         internalType: "address",
       },
       {
-        name: "poolId",
-        type: "bytes32",
-        indexed: true,
-        internalType: "bytes32",
+        name: "amountIn",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
       },
       {
         name: "amountOut",
-        type: "uint128",
+        type: "uint256",
         indexed: false,
-        internalType: "uint128",
+        internalType: "uint256",
       },
       {
         name: "amountInMax",
-        type: "uint128",
-        indexed: false,
-        internalType: "uint128",
-      },
-      {
-        name: "deadline",
         type: "uint256",
         indexed: false,
         internalType: "uint256",
@@ -356,21 +216,15 @@ export const SmartWalletAbi = [
     name: "DepositUSDC",
     inputs: [
       {
-        name: "smartWallet",
+        name: "usdc",
         type: "address",
         indexed: true,
         internalType: "address",
       },
       {
-        name: "usdc",
-        type: "address",
-        indexed: false,
-        internalType: "address",
-      },
-      {
         name: "amount",
         type: "uint256",
-        indexed: false,
+        indexed: true,
         internalType: "uint256",
       },
     ],
@@ -378,7 +232,7 @@ export const SmartWalletAbi = [
   },
   {
     type: "event",
-    name: "SellTokensV4",
+    name: "SellTokens",
     inputs: [
       {
         name: "smartWallet",
@@ -387,25 +241,43 @@ export const SmartWalletAbi = [
         internalType: "address",
       },
       {
-        name: "poolId",
-        type: "bytes32",
+        name: "pair",
+        type: "address",
         indexed: true,
-        internalType: "bytes32",
+        internalType: "address",
+      },
+      {
+        name: "tokenIn",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+      {
+        name: "tokenOut",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+      {
+        name: "operator",
+        type: "address",
+        indexed: false,
+        internalType: "address",
       },
       {
         name: "amountIn",
-        type: "uint128",
+        type: "uint256",
         indexed: false,
-        internalType: "uint128",
+        internalType: "uint256",
+      },
+      {
+        name: "amountOut",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
       },
       {
         name: "amountOutMin",
-        type: "uint128",
-        indexed: false,
-        internalType: "uint128",
-      },
-      {
-        name: "deadline",
         type: "uint256",
         indexed: false,
         internalType: "uint256",
@@ -418,13 +290,7 @@ export const SmartWalletAbi = [
     name: "WithdrawUSDC",
     inputs: [
       {
-        name: "smartWallet",
-        type: "address",
-        indexed: true,
-        internalType: "address",
-      },
-      {
-        name: "to",
+        name: "usdc",
         type: "address",
         indexed: true,
         internalType: "address",
@@ -432,14 +298,8 @@ export const SmartWalletAbi = [
       {
         name: "amount",
         type: "uint256",
-        indexed: false,
+        indexed: true,
         internalType: "uint256",
-      },
-      {
-        name: "usdc",
-        type: "address",
-        indexed: false,
-        internalType: "address",
       },
     ],
     anonymous: false,
@@ -461,7 +321,7 @@ export const SmartWalletAbi = [
   },
   {
     type: "error",
-    name: "SmartWallet__InvalidOperatorAddress",
+    name: "SmartWallet__InvalidTokenAddress",
     inputs: [],
   },
   {
@@ -472,11 +332,6 @@ export const SmartWalletAbi = [
   {
     type: "error",
     name: "SmartWallet__NotOwner",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "SmartWallet__PoolMustIncludeUSDC",
     inputs: [],
   },
   {

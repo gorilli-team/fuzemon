@@ -14,17 +14,12 @@ export const SmartWalletFactoryAbi = [
         internalType: "address",
       },
       {
+        name: "factoryV2",
+        type: "address",
+        internalType: "address",
+      },
+      {
         name: "router",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "poolManager",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "permit2",
         type: "address",
         internalType: "address",
       },
@@ -247,7 +242,7 @@ export const SmartWalletFactoryAbi = [
   },
   {
     type: "error",
-    name: "SmartWalletFactory__WalletLimitExceeded",
+    name: "SmartWalletFactory__ExceededWalletLimit",
     inputs: [],
   },
 ] as const;

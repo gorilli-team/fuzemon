@@ -1,16 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAccount, useBalance } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
 import { useSmartWalletTrading } from "../hooks/useSmartWalletTrading";
-import { useDepositUSDC } from "../hooks/useDepositUSDC";
-import { useWithdrawUSDC } from "../hooks/useWithdrawUSDC";
 
 interface SmartWalletTokenTradingProps {
   tokenAddress: string;
   tokenSymbol: string;
-  tokenName: string;
   currentPrice: number;
   onTransactionComplete?: () => void;
 }
@@ -27,7 +24,6 @@ interface SmartWallet {
 export function SmartWalletTokenTrading({
   tokenAddress,
   tokenSymbol,
-  tokenName,
   currentPrice,
   onTransactionComplete,
 }: SmartWalletTokenTradingProps) {
@@ -43,12 +39,10 @@ export function SmartWalletTokenTrading({
   const [error, setError] = useState<string | null>(null);
 
   const {
-    buyTokensV4,
-    sellTokensV4,
+    buyTokens,
+    sellTokens,
     isPending: isTrading,
   } = useSmartWalletTrading();
-  const { depositUSDC, isPending: isDepositing } = useDepositUSDC();
-  const { withdrawUSDC, isPending: isWithdrawing } = useWithdrawUSDC();
 
   // Get USDC balance for the selected smart wallet
   const { data: usdcBalance } = useBalance({
@@ -57,7 +51,7 @@ export function SmartWalletTokenTrading({
   });
 
   // Fetch user's smart wallets
-  const fetchSmartWallets = async () => {
+  const fetchSmartWallets = useCallback(async () => {
     if (!address) return;
 
     try {
@@ -75,11 +69,11 @@ export function SmartWalletTokenTrading({
     } finally {
       setLoading(false);
     }
-  };
+  }, [address]);
 
   useEffect(() => {
     fetchSmartWallets();
-  }, [address]);
+  }, [address, fetchSmartWallets]);
 
   // Log environment variables for debugging
   useEffect(() => {
@@ -143,25 +137,6 @@ export function SmartWalletTokenTrading({
         throw new Error("Invalid USDC amount");
       }
 
-      // Validate environment variables
-      const requiredEnvVars = [
-        "NEXT_PUBLIC_USDC_ADDRESS_MONAD",
-        "NEXT_PUBLIC_SMART_WALLET_FACTORY_MONAD",
-        "NEXT_PUBLIC_UNIVERSAL_ROUTER_MONAD",
-        "NEXT_PUBLIC_POOL_MANAGER_MONAD",
-        "NEXT_PUBLIC_PERMIT2_MONAD",
-      ];
-
-      // const missingEnvVars = requiredEnvVars.filter(
-      //   (envVar) => !process.env[envVar]
-      // );
-      // if (missingEnvVars.length > 0) {
-      //   console.error("❌ Missing environment variables:", missingEnvVars);
-      //   throw new Error(
-      //     `Missing required environment variables: ${missingEnvVars.join(", ")}`
-      //   );
-      // }
-
       console.log("✅ All required environment variables are set");
 
       // Check USDC balance
@@ -200,30 +175,11 @@ export function SmartWalletTokenTrading({
           tokenAddress,
         });
 
-        // Create the pool key for the swap
-        const poolKey = {
-          currency0: process.env
-            .NEXT_PUBLIC_USDC_ADDRESS_MONAD as `0x${string}`,
-          currency1: tokenAddress as `0x${string}`,
-          fee: 3000, // 0.3% fee
-          tickSpacing: 60,
-          hooks: "0x0000000000000000000000000000000000000000" as `0x${string}`,
-        };
-
-        console.log("🏊 Pool Configuration:", poolKey);
-
-        console.log(
-          "⏰ Transaction deadline:",
-          new Date(Date.now() + 1800000).toISOString()
-        );
-
-        const txHash = await buyTokensV4(
+        const txHash = await buyTokens(
           selectedSmartWallet.smartWallet as `0x${string}`,
-          poolKey,
-          true, // zeroForOne: true means we're swapping currency0 (USDC) for currency1 (token)
+          tokenAddress,
           tokenAmountBigInt,
-          usdcAmountBigInt,
-          BigInt(Math.floor(Date.now() / 1000) + 1800) // 30 minutes deadline
+          usdcAmountBigInt
         );
 
         console.log("✅ Buy transaction submitted:", txHash);
@@ -241,30 +197,11 @@ export function SmartWalletTokenTrading({
           tokenAddress,
         });
 
-        // Create the pool key for the swap
-        const poolKey = {
-          currency0: process.env
-            .NEXT_PUBLIC_USDC_ADDRESS_MONAD as `0x${string}`,
-          currency1: tokenAddress as `0x${string}`,
-          fee: 3000, // 0.3% fee
-          tickSpacing: 60,
-          hooks: "0x0000000000000000000000000000000000000000" as `0x${string}`,
-        };
-
-        console.log("🏊 Pool Configuration:", poolKey);
-
-        console.log(
-          "⏰ Transaction deadline:",
-          new Date(Date.now() + 1800000).toISOString()
-        );
-
-        const txHash = await sellTokensV4(
+        const txHash = await sellTokens(
           selectedSmartWallet.smartWallet as `0x${string}`,
-          poolKey,
-          false, // zeroForOne: false means we're swapping currency1 (token) for currency0 (USDC)
+          tokenAddress,
           tokenAmountBigInt,
-          usdcAmountBigInt,
-          BigInt(Math.floor(Date.now() / 1000) + 1800) // 30 minutes deadline
+          usdcAmountBigInt
         );
 
         console.log("✅ Sell transaction submitted:", txHash);
@@ -311,56 +248,6 @@ export function SmartWalletTokenTrading({
       setError(error instanceof Error ? error.message : "Trading failed");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDeposit = async () => {
-    if (!selectedSmartWallet || !usdcAmount) return;
-
-    try {
-      setError(null);
-      console.log("💰 Starting USDC deposit...");
-      console.log("📱 Smart Wallet:", selectedSmartWallet.smartWallet);
-      console.log("💵 USDC Amount:", usdcAmount);
-
-      const usdcAmountBigInt = parseUnits(usdcAmount, 6);
-      console.log("🔢 Parsed Amount:", usdcAmountBigInt.toString());
-
-      const txHash = await depositUSDC(
-        selectedSmartWallet.smartWallet as `0x${string}`,
-        usdcAmountBigInt
-      );
-
-      console.log("✅ Deposit transaction hash:", txHash);
-      onTransactionComplete?.();
-    } catch (error) {
-      console.error("❌ Deposit failed:", error);
-      setError(error instanceof Error ? error.message : "Deposit failed");
-    }
-  };
-
-  const handleWithdraw = async () => {
-    if (!selectedSmartWallet || !usdcAmount) return;
-
-    try {
-      setError(null);
-      console.log("💸 Starting USDC withdrawal...");
-      console.log("📱 Smart Wallet:", selectedSmartWallet.smartWallet);
-      console.log("💵 USDC Amount:", usdcAmount);
-
-      const usdcAmountBigInt = parseUnits(usdcAmount, 6);
-      console.log("🔢 Parsed Amount:", usdcAmountBigInt.toString());
-
-      const txHash = await withdrawUSDC(
-        selectedSmartWallet.smartWallet as `0x${string}`,
-        usdcAmountBigInt
-      );
-
-      console.log("✅ Withdrawal transaction hash:", txHash);
-      onTransactionComplete?.();
-    } catch (error) {
-      console.error("❌ Withdraw failed:", error);
-      setError(error instanceof Error ? error.message : "Withdraw failed");
     }
   };
 

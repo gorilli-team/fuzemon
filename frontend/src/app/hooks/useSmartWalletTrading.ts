@@ -4,31 +4,17 @@ import { SmartWalletAbi } from "../abi/SmartWalletAbi";
 export function useSmartWalletTrading() {
   const { writeContractAsync, isPending, error } = useWriteContract();
 
-  const buyTokensV4 = async (
+  const buyTokens = async (
     smartWallet: `0x${string}`,
-    key: {
-      currency0: `0x${string}`;
-      currency1: `0x${string}`;
-      fee: number;
-      tickSpacing: number;
-      hooks: `0x${string}`;
-    },
-    zeroForOne: boolean,
+    tokenOut: string,
     amountOut: bigint,
-    amountInMax: bigint,
-    deadline: bigint
+    amountInMax: bigint
   ) => {
-    console.log("🔍 SmartWalletTrading - buyTokensV4 called with:");
+    console.log("🔍 SmartWalletTrading - buyTokens called with:");
     console.log("📱 Smart Wallet:", smartWallet);
-    console.log("🔑 Pool Key:", key);
-    console.log("🔄 Zero for One:", zeroForOne);
+    console.log("🪙 Token Out:", tokenOut);
     console.log("📤 Amount Out:", amountOut.toString());
     console.log("📥 Amount In Max:", amountInMax.toString());
-    console.log(
-      "⏰ Deadline:",
-      deadline.toString(),
-      new Date(Number(deadline) * 1000).toISOString()
-    );
 
     try {
       console.log("📝 Preparing contract call...");
@@ -36,18 +22,18 @@ export function useSmartWalletTrading() {
       const contractCall = {
         abi: SmartWalletAbi,
         address: smartWallet,
-        functionName: "buyTokensV4" as const,
-        args: [key, zeroForOne, amountOut, amountInMax, deadline],
+        functionName: "buyTokens" as const,
+        args: [tokenOut, amountOut, amountInMax],
       };
 
       console.log("📋 Contract call details:", contractCall);
 
       const txHash = await writeContractAsync(contractCall as any);
 
-      console.log("✅ buyTokensV4 transaction hash:", txHash);
+      console.log("✅ buyTokens transaction hash:", txHash);
       return txHash;
     } catch (error) {
-      console.error("❌ buyTokensV4 failed:", error);
+      console.error("❌ buyTokens failed:", error);
 
       if (error instanceof Error) {
         console.error("Error details:", {
@@ -61,31 +47,17 @@ export function useSmartWalletTrading() {
     }
   };
 
-  const sellTokensV4 = async (
+  const sellTokens = async (
     smartWallet: `0x${string}`,
-    key: {
-      currency0: `0x${string}`;
-      currency1: `0x${string}`;
-      fee: number;
-      tickSpacing: number;
-      hooks: `0x${string}`;
-    },
-    zeroForOne: boolean,
+    tokenIn: string,
     amountIn: bigint,
-    amountOutMin: bigint,
-    deadline: bigint
+    amountOutMin: bigint
   ) => {
-    console.log("🔍 SmartWalletTrading - sellTokensV4 called with:");
+    console.log("🔍 SmartWalletTrading - sellTokens called with:");
     console.log("📱 Smart Wallet:", smartWallet);
-    console.log("🔑 Pool Key:", key);
-    console.log("🔄 Zero for One:", zeroForOne);
+    console.log("🪙 Token In:", tokenIn);
     console.log("📥 Amount In:", amountIn.toString());
     console.log("📤 Amount Out Min:", amountOutMin.toString());
-    console.log(
-      "⏰ Deadline:",
-      deadline.toString(),
-      new Date(Number(deadline) * 1000).toISOString()
-    );
 
     try {
       console.log("📝 Preparing contract call...");
@@ -93,18 +65,18 @@ export function useSmartWalletTrading() {
       const contractCall = {
         abi: SmartWalletAbi,
         address: smartWallet,
-        functionName: "sellTokensV4" as const,
-        args: [key, zeroForOne, amountIn, amountOutMin, deadline],
+        functionName: "sellTokens" as const,
+        args: [tokenIn, amountIn, amountOutMin],
       };
 
       console.log("📋 Contract call details:", contractCall);
 
       const txHash = await writeContractAsync(contractCall as any);
 
-      console.log("✅ sellTokensV4 transaction hash:", txHash);
+      console.log("✅ sellTokens transaction hash:", txHash);
       return txHash;
     } catch (error) {
-      console.error("❌ sellTokensV4 failed:", error);
+      console.error("❌ sellTokens failed:", error);
 
       if (error instanceof Error) {
         console.error("Error details:", {
@@ -118,5 +90,5 @@ export function useSmartWalletTrading() {
     }
   };
 
-  return { buyTokensV4, sellTokensV4, isPending, error };
+  return { buyTokens, sellTokens, isPending, error };
 }
