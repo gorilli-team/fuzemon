@@ -44,15 +44,18 @@ export const createOrder = async (
   const escrowFactoryAddress = ChainConfigs[srcChainId].EscrowFactory;
   const srcTimestamp = BigInt(Math.floor(Date.now() / 1000));
 
-  // Create order info
+  // Create order info with enhanced randomness
+  const salt = randBigInt(1000000); // Increased randomness
   const orderInfo = {
     makerAsset: new Address(srcTokenAddress) as EvmAddress,
     takerAsset: new Address(dstTokenAddress) as AddressLike,
     makingAmount: parseUnits(makingAmount, srcTokenDecimals),
     takingAmount: parseUnits(takingAmount, dstTokenDecimals),
     maker: new Address(srcChainUserAddress) as EvmAddress,
-    salt: randBigInt(1000),
+    salt: salt,
   };
+
+  console.log("🔢 Order salt:", salt.toString());
 
   // Create escrow parameters
   const escrowParams = {
@@ -91,12 +94,15 @@ export const createOrder = async (
     resolvingStartTime: BigInt(0),
   };
 
-  // Create extra options
+  // Create extra options with enhanced randomness
+  const nonce = randBigInt(1000000); // Increased randomness
   const extra = {
-    nonce: randBigInt(1000),
+    nonce: nonce,
     allowPartialFills: false,
     allowMultipleFills: false,
   };
+
+  console.log("🔢 Order nonce:", nonce.toString());
 
   const order = CrossChainOrder.new(
     new Address(escrowFactoryAddress) as EvmAddress,
@@ -106,7 +112,8 @@ export const createOrder = async (
     extra
   );
 
-  console.log("order", order);
+  console.log("📦 Order created:", order);
+  console.log("🔑 Order hash:", order.getOrderHash(srcChainId));
 
   const orderTypedData = order.getTypedData(srcChainId);
   const orderdata = {

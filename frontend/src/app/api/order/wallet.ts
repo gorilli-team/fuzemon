@@ -125,11 +125,29 @@ class Wallet {
     blockTimestamp: bigint;
     blockHash: string;
   }> {
-    const res = await this.signer.sendTransaction({
+    console.log("[WALLET DEBUG] Received params:", {
+      to: param.to,
+      data: param.data,
+      dataLength: param.data?.length,
+      value: param.value?.toString(),
+    });
+
+    const txParams = {
       ...param,
       gasLimit: 5_000_000,
       from: await this.getAddress(),
+    };
+
+    console.log("[WALLET DEBUG] Transaction params:", {
+      to: txParams.to,
+      data: txParams.data,
+      dataLength: txParams.data?.length,
+      value: txParams.value?.toString(),
+      gasLimit: txParams.gasLimit,
+      from: txParams.from,
     });
+
+    const res = await this.signer.sendTransaction(txParams);
     const receipt = await res.wait(1, 60000);
     const block = await res.getBlock();
     if (receipt && receipt.status) {
