@@ -150,6 +150,33 @@ export async function POST(request: Request) {
       dataIsEmpty: callData.data === "" || callData.data === "0x",
     });
 
+    // Log the function being called
+    const functionSelector = callData.data.slice(0, 10);
+    console.log(`[API] Function selector: ${functionSelector}`);
+    console.log(
+      `[API] Function being called: ${
+        functionSelector === "0xca218276" ? "deploySrc" : "unknown"
+      }`
+    );
+
+    // Log chain information
+    console.log(
+      `[API] Source chain: ${swapState.fromChain} (${
+        swapState.fromChain === 11155111 ? "Sepolia" : "Unknown"
+      })`
+    );
+    console.log(
+      `[API] Destination chain: ${swapState.toChain} (${
+        swapState.toChain === 10143 ? "Monad Testnet" : "Unknown"
+      })`
+    );
+    console.log(`[API] Contract address: ${callData.to}`);
+    console.log(
+      `[API] Resolver contract for source chain: ${
+        ChainConfigs[swapState.fromChain].ResolverContractAddress
+      }`
+    );
+
     // Debug order signature and validation
     console.log("[DEBUG] Order signature validation:");
     console.log("[DEBUG] Received orderHash:", orderHash);
@@ -352,12 +379,24 @@ export async function POST(request: Request) {
         type: txRequestWithGas.type,
       });
 
+      console.log(`[API] Sending transaction to source chain...`);
+      console.log(`[API] Transaction details:`, {
+        to: txRequestWithGas.to,
+        data: txRequestWithGas.data?.slice(0, 20) + "...",
+        value: txRequestWithGas.value?.toString(),
+        gasLimit: txRequestWithGas.gasLimit?.toString(),
+      });
+
       const tx = await srcChainResolver.signer.sendTransaction(
         txRequestWithGas
       );
       console.log("[DEBUG] Transaction sent successfully:", tx.hash);
+      console.log(`[API] Waiting for transaction confirmation...`);
 
       const receipt = await tx.wait();
+      console.log(
+        `[API] Transaction confirmed in block: ${receipt.blockNumber}`
+      );
       if (!receipt) {
         throw new Error("Transaction receipt is null");
       }
@@ -367,6 +406,12 @@ export async function POST(request: Request) {
       console.log(`[API] Order filled successfully: ${orderFillHash}`);
     } catch (sendError) {
       console.error("[DEBUG] Transaction failed:", sendError);
+
+      // Enhanced error logging for debugging
+      if (sendError instanceof Error) {
+        console.error("[DEBUG] Error message:", sendError.message);
+        console.error("[DEBUG] Error stack:", sendError.stack);
+      }
 
       // Don't try alternative methods - just return the error
       // Handle BigInt serialization to prevent API crashes
@@ -386,6 +431,10 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log(`[API] ✅ Transaction completed successfully!`);
+    console.log(`[API] Order fill hash: ${orderFillHash}`);
+    console.log(`[API] Source deploy block: ${srcDeployBlock}`);
+
     console.log(
       `[API] Fetching source escrow deployment event for user: ${userAddress}`
     );
@@ -400,17 +449,29 @@ export async function POST(request: Request) {
       .withComplement(srcEscrowEvent[1])
       .withTaker(new Address(resolverContract.dstAddress));
 
-    console.log(`[API] Deploying destination escrow for user: ${userAddress}`);
+    console.log(
+      `[API] 🔄 Deploying destination escrow for user: ${userAddress}`
+    );
+    console.log(
+      `[API] Destination chain: ${swapState.toChain} (${
+        swapState.toChain === 10143 ? "Monad Testnet" : "Unknown"
+      })`
+    );
+
     const dstChainResolver = await getChainResolver(
       swapState.toChain,
       userAddress
     );
+    console.log(`[API] Destination chain resolver connected`);
+
     const dstCallData = resolverContract.deployDst(dstImmutables as Immutables);
+    console.log(`[API] Destination call data prepared`);
+
     const dstResult = await dstChainResolver.send(dstCallData);
     const dstDepositHash = dstResult.txHash;
     const dstDeployedAt = dstResult.blockTimestamp;
     console.log(
-      `[API] Destination escrow deployed: ${dstDepositHash} for user: ${userAddress}`
+      `[API] ✅ Destination escrow deployed: ${dstDepositHash} for user: ${userAddress}`
     );
 
     const dstImmutablesData = dstImmutables
@@ -459,8 +520,17 @@ export async function POST(request: Request) {
     );
 
     console.log(
-      `[API] Cross-chain exchange completed successfully for user: ${userAddress}`
+      `[API] 🎉 Cross-chain exchange completed successfully for user: ${userAddress}`
     );
+    console.log(`[API] 📊 Summary:`);
+    console.log(
+      `[API] - Source escrow deployed on chain ${swapState.fromChain}`
+    );
+    console.log(
+      `[API] - Destination escrow deployed on chain ${swapState.toChain}`
+    );
+    console.log(`[API] - Order fill hash: ${orderFillHash}`);
+    console.log(`[API] - Destination deploy hash: ${dstDepositHash}`);
     return NextResponse.json(serializedRes, {
       status: 200,
       headers: {
