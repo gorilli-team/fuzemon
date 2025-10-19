@@ -123,9 +123,10 @@ const getRealTokenPrice = (symbol: string) => {
       if (candlestickData.length > 0) {
         const current = candlestickData[0].close;
 
-        // Find the closest data point to 24 hours ago using the full timeframe
-        const now = Date.now() / 1000;
-        const twentyFourHoursAgo = now - 3600 * 24;
+        // Use the most recent data point timestamp as reference (consistent with token page)
+        const mostRecentTime =
+          new Date(candlestickData[0].timestamp).getTime() / 1000;
+        const twentyFourHoursAgo = mostRecentTime - 3600 * 24;
 
         let twentyFourHoursPrice = current;
         let closestTimeDiff = Infinity;
