@@ -583,10 +583,8 @@ export default function RealSwapComponent() {
           <p className="text-sm text-gray-400 mt-1">
             USDC (ETH Sepolia) → USDC (Monad Testnet)
           </p>
-          <div className="mt-2 px-3 py-1 bg-blue-900/30 border border-blue-500/30 rounded-lg inline-block">
-            <span className="text-blue-300 text-xs">
-              🔒 Fixed Configuration
-            </span>
+          <div className="mt-2 px-3 py-1 bg-dark-700 border border-dark-500 rounded-lg inline-block">
+            <span className="text-white text-xs">Fixed Configuration</span>
           </div>
         </div>
         <div className="flex items-center space-x-2">

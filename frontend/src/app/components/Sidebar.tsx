@@ -59,17 +59,6 @@ export default function Sidebar() {
               <span>Tokens</span>
             </Link>
           </li>
-          <li>
-            <Link
-              href="/chart-test"
-              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 block ${
-                pathname === "/chart-test" ? "bg-dark-700 text-white" : ""
-              }`}
-            >
-              <i className="fa-solid fa-chart-candlestick pr-2"></i>
-              <span>Chart Test</span>
-            </Link>
-          </li>
         </ul>
       </nav>
 

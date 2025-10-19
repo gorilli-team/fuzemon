@@ -408,64 +408,92 @@ export default function TokenPage() {
           // Use the most recent data point as current
           const current = candlestickData[0].close;
 
-          // Calculate time-based comparisons using the full timeframe
-          const now = Date.now() / 1000;
-          const oneHourAgo = now - 3600;
-          const sixHoursAgo = now - 3600 * 6;
-          const twentyFourHoursAgo = now - 3600 * 24;
+          // Calculate time-based comparisons using the most recent data point as reference
+          const mostRecentTime =
+            new Date(candlestickData[0].timestamp).getTime() / 1000;
+          const threeHoursAgo = mostRecentTime - 3600 * 3;
+          const sixHoursAgo = mostRecentTime - 3600 * 6;
+          const twentyFourHoursAgo = mostRecentTime - 3600 * 24;
 
           // Find closest data points to these times
-          let oneHourPrice = current;
+          let threeHoursPrice = current;
           let sixHoursPrice = current;
           let twentyFourHoursPrice = current;
-          let oneHourTimestamp = candlestickData[0].timestamp;
+          let threeHoursTimestamp = candlestickData[0].timestamp;
           let sixHoursTimestamp = candlestickData[0].timestamp;
           let twentyFourHoursTimestamp = candlestickData[0].timestamp;
 
+          // Find the closest data points to the target times
           for (const dataPoint of candlestickData) {
             const dataTime = new Date(dataPoint.timestamp).getTime() / 1000;
 
-            if (
-              dataTime <= oneHourAgo &&
-              Math.abs(dataTime - oneHourAgo) <
-                Math.abs(
-                  new Date(oneHourTimestamp).getTime() / 1000 - oneHourAgo
-                )
-            ) {
-              oneHourPrice = dataPoint.close;
-              oneHourTimestamp = dataPoint.timestamp;
+            // Find closest point to 3 hours ago
+            if (dataTime <= threeHoursAgo) {
+              const currentDiff = Math.abs(dataTime - threeHoursAgo);
+              const bestDiff = Math.abs(
+                new Date(threeHoursTimestamp).getTime() / 1000 - threeHoursAgo
+              );
+              if (currentDiff < bestDiff) {
+                threeHoursPrice = dataPoint.close;
+                threeHoursTimestamp = dataPoint.timestamp;
+              }
             }
-            if (
-              dataTime <= sixHoursAgo &&
-              Math.abs(dataTime - sixHoursAgo) <
-                Math.abs(
-                  new Date(sixHoursTimestamp).getTime() / 1000 - sixHoursAgo
-                )
-            ) {
-              sixHoursPrice = dataPoint.close;
-              sixHoursTimestamp = dataPoint.timestamp;
+
+            // Find closest point to 6 hours ago
+            if (dataTime <= sixHoursAgo) {
+              const currentDiff = Math.abs(dataTime - sixHoursAgo);
+              const bestDiff = Math.abs(
+                new Date(sixHoursTimestamp).getTime() / 1000 - sixHoursAgo
+              );
+              if (currentDiff < bestDiff) {
+                sixHoursPrice = dataPoint.close;
+                sixHoursTimestamp = dataPoint.timestamp;
+              }
             }
-            if (
-              dataTime <= twentyFourHoursAgo &&
-              Math.abs(dataTime - twentyFourHoursAgo) <
-                Math.abs(
-                  new Date(twentyFourHoursTimestamp).getTime() / 1000 -
-                    twentyFourHoursAgo
-                )
-            ) {
-              twentyFourHoursPrice = dataPoint.close;
-              twentyFourHoursTimestamp = dataPoint.timestamp;
+
+            // Find closest point to 24 hours ago
+            if (dataTime <= twentyFourHoursAgo) {
+              const currentDiff = Math.abs(dataTime - twentyFourHoursAgo);
+              const bestDiff = Math.abs(
+                new Date(twentyFourHoursTimestamp).getTime() / 1000 -
+                  twentyFourHoursAgo
+              );
+              if (currentDiff < bestDiff) {
+                twentyFourHoursPrice = dataPoint.close;
+                twentyFourHoursTimestamp = dataPoint.timestamp;
+              }
             }
           }
 
+          // Debug logging to verify calculations
+          console.log(`${symbol} Price Calculations:`, {
+            current,
+            threeHoursAgo: threeHoursPrice,
+            sixHoursAgo: sixHoursPrice,
+            twentyFourHoursAgo: twentyFourHoursPrice,
+            threeHourChange:
+              (((current - threeHoursPrice) / threeHoursPrice) * 100).toFixed(
+                2
+              ) + "%",
+            sixHourChange:
+              (((current - sixHoursPrice) / sixHoursPrice) * 100).toFixed(2) +
+              "%",
+            twentyFourHourChange:
+              (
+                ((current - twentyFourHoursPrice) / twentyFourHoursPrice) *
+                100
+              ).toFixed(2) + "%",
+            dataPoints: candlestickData.length,
+          });
+
           return {
             current,
-            oneHourAgo: oneHourPrice,
+            oneHourAgo: threeHoursPrice,
             sixHoursAgo: sixHoursPrice,
             twentyFourHoursAgo: twentyFourHoursPrice,
             timestamps: {
               current: candlestickData[0].timestamp,
-              oneHourAgo: oneHourTimestamp,
+              oneHourAgo: threeHoursTimestamp,
               sixHoursAgo: sixHoursTimestamp,
               twentyFourHoursAgo: twentyFourHoursTimestamp,
             },
@@ -911,7 +939,7 @@ export default function TokenPage() {
                       : "text-red-500"
                   }`}
                 >
-                  1h:{" "}
+                  3h:{" "}
                   {pricePoints.current >= pricePoints.oneHourAgo ? "▲" : "▼"}{" "}
                   {(
                     ((pricePoints.current - pricePoints.oneHourAgo) /
