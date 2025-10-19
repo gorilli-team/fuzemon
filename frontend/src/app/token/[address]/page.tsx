@@ -68,6 +68,14 @@ interface CompletedTrade {
   txHash?: string;
 }
 
+interface Signal {
+  action: string;
+  price: number;
+  timestamp: string;
+  symbol: string;
+  confidence: number;
+}
+
 export default function TokenPage() {
   const params = useParams();
   const tokenAddress = params.address as string;
@@ -78,6 +86,7 @@ export default function TokenPage() {
   const [priceData, setPriceData] = useState<PriceData[]>([]);
   const [pricePoints, setPricePoints] = useState<PricePoints | null>(null);
   const [completedTrades, setCompletedTrades] = useState<CompletedTrade[]>([]);
+  const [signals, setSignals] = useState<Signal[]>([]);
   const [tradesLoading] = useState(false);
 
   // Get token data based on address
@@ -611,8 +620,151 @@ export default function TokenPage() {
     return tradesMap[symbol] || [];
   };
 
+  // Generate signals based on price data
+  const generateSignals = (symbol: string): Signal[] => {
+    const signals: Signal[] = [];
+
+    // Get the appropriate price data based on token symbol
+    let pricesData: Record<string, MonadPriceData[]>;
+
+    switch (symbol) {
+      case "MON":
+        pricesData = monadPricesData as Record<string, MonadPriceData[]>;
+        break;
+      case "WETH":
+        pricesData = wethPricesData as Record<string, MonadPriceData[]>;
+        break;
+      case "CHOG":
+        pricesData = chogPricesData as Record<string, MonadPriceData[]>;
+        break;
+      default:
+        return [];
+    }
+
+    if (pricesData) {
+      const priceDataKey = Object.keys(pricesData)[0];
+      const monadPrices = pricesData[priceDataKey];
+
+      if (monadPrices.length > 0) {
+        // Create candlestick data for signal analysis
+        const candlestickData: MonadPriceData[] = [];
+        const threeHoursInMs = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+
+        // Group data by 3-hour time windows
+        const timeGroups = new Map<string, MonadPriceData[]>();
+
+        monadPrices.forEach((price) => {
+          const timestamp = new Date(price.timestamp).getTime();
+          const windowStart =
+            Math.floor(timestamp / threeHoursInMs) * threeHoursInMs;
+          const windowKey = new Date(windowStart).toISOString();
+
+          if (!timeGroups.has(windowKey)) {
+            timeGroups.set(windowKey, []);
+          }
+          timeGroups.get(windowKey)!.push(price);
+        });
+
+        // Convert each time group into a proper candlestick
+        timeGroups.forEach((groupPrices, windowKey) => {
+          if (groupPrices.length > 0) {
+            groupPrices.sort(
+              (a, b) =>
+                new Date(a.timestamp).getTime() -
+                new Date(b.timestamp).getTime()
+            );
+
+            const open = groupPrices[0].open;
+            const close = groupPrices[groupPrices.length - 1].close;
+            const high = Math.max(...groupPrices.map((p) => p.high));
+            const low = Math.min(...groupPrices.map((p) => p.low));
+            const volume = groupPrices.reduce((sum, p) => sum + p.volume, 0);
+
+            const candlestick: MonadPriceData = {
+              ...groupPrices[0],
+              open,
+              high,
+              low,
+              close,
+              volume,
+              timestamp: windowKey,
+            };
+
+            candlestickData.push(candlestick);
+          }
+        });
+
+        // Sort by timestamp (newest first)
+        candlestickData.sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+
+        // Generate signals based on price patterns
+        for (let i = 2; i < candlestickData.length; i++) {
+          const current = candlestickData[i];
+          const previous = candlestickData[i - 1];
+
+          // Bullish signal: Higher high and higher low
+          if (
+            current.high > previous.high &&
+            current.low > previous.low &&
+            current.close > current.open
+          ) {
+            signals.push({
+              action: "BUY",
+              price: current.close,
+              timestamp: current.timestamp,
+              symbol: symbol,
+              confidence: Math.min(0.9, 0.6 + (current.volume / 1000000) * 0.3), // Volume-based confidence
+            });
+          }
+
+          // Bearish signal: Lower high and lower low
+          if (
+            current.high < previous.high &&
+            current.low < previous.low &&
+            current.close < current.open
+          ) {
+            signals.push({
+              action: "SELL",
+              price: current.close,
+              timestamp: current.timestamp,
+              symbol: symbol,
+              confidence: Math.min(0.9, 0.6 + (current.volume / 1000000) * 0.3),
+            });
+          }
+
+          // Strong momentum signal: Significant price change with high volume
+          const priceChange =
+            Math.abs(current.close - previous.close) / previous.close;
+          if (priceChange > 0.05 && current.volume > previous.volume * 1.5) {
+            const action = current.close > previous.close ? "BUY" : "SELL";
+            signals.push({
+              action,
+              price: current.close,
+              timestamp: current.timestamp,
+              symbol: symbol,
+              confidence: Math.min(0.95, 0.7 + priceChange * 2),
+            });
+          }
+
+          // Limit to last 10 signals to avoid too many
+          if (signals.length >= 10) break;
+        }
+      }
+    }
+
+    return signals;
+  };
+
   const mockCompletedTrades = useMemo(
     () => getCompletedTrades(mockTokenData.symbol),
+    [mockTokenData.symbol]
+  );
+
+  const mockSignals = useMemo(
+    () => generateSignals(mockTokenData.symbol),
     [mockTokenData.symbol]
   );
 
@@ -636,6 +788,7 @@ export default function TokenPage() {
         setPriceData(mockPriceData);
         setPricePoints(mockPricePoints);
         setCompletedTrades(mockCompletedTrades);
+        setSignals(mockSignals);
       } catch (error) {
         console.error("Error fetching token info:", error);
         setError("Failed to load token information");
@@ -651,6 +804,7 @@ export default function TokenPage() {
     mockPriceData,
     mockPricePoints,
     mockCompletedTrades,
+    mockSignals,
   ]);
 
   const getTimeAgo = (timestamp: number) => {
@@ -813,9 +967,58 @@ export default function TokenPage() {
             <CandlestickChart
               data={priceData}
               tokenSymbol={token.symbol}
-              signals={[]}
+              signals={signals}
             />
           </div>
+        </div>
+
+        {/* Signals Section */}
+        <div className="bg-dark-800 rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-white mb-4">
+            Trading Signals
+          </h2>
+          {signals.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-dark-400 text-sm">No signals available</div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {signals.slice(0, 5).map((signal, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                    signal.action === "BUY"
+                      ? "border-green-500 bg-green-500/10"
+                      : "border-red-500 bg-red-500/10"
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div
+                      className={`w-3 h-3 rounded-full ${
+                        signal.action === "BUY" ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    />
+                    <div>
+                      <div className="text-white font-medium">
+                        {signal.action} {signal.symbol}
+                      </div>
+                      <div className="text-dark-400 text-sm">
+                        {new Date(signal.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-white font-medium">
+                      ${signal.price.toFixed(6)}
+                    </div>
+                    <div className="text-dark-400 text-sm">
+                      Confidence: {(signal.confidence * 100).toFixed(0)}%
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Completed Trades Section */}
