@@ -6,7 +6,9 @@ import {
   ClockIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
+import Image from "next/image";
 import { Order } from "../types/order";
+import { getChainLogo } from "../constants/chains";
 
 interface OrderCardProps {
   order: Order;
@@ -30,7 +32,7 @@ export default function OrderCard({ order }: OrderCardProps) {
     switch (status) {
       case "CREATED":
         return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-white">
             <ClockIcon className="w-3 h-3 mr-1" />
             Created
           </span>
@@ -75,7 +77,7 @@ export default function OrderCard({ order }: OrderCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "CREATED":
-        return "border-blue-200 bg-blue-50";
+        return "border-primary bg-primary";
       case "PENDING_SECRET":
         return "border-yellow-200 bg-yellow-50";
       case "PENDING_WITHDRAW":
@@ -157,8 +159,13 @@ export default function OrderCard({ order }: OrderCardProps) {
                   )}{" "}
                   {order.fromToken.symbol}
                 </span>
-                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-xs font-medium text-blue-600">🔵</span>
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <Image
+                    src={getChainLogo(order.swapState.fromChain)}
+                    alt={order.fromToken.symbol}
+                    width={32}
+                    height={32}
+                  />
                 </div>
               </div>
 
@@ -181,18 +188,23 @@ export default function OrderCard({ order }: OrderCardProps) {
               </div>
 
               <div className="flex items-center space-x-3">
-                <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                  <span className="text-xs font-medium text-green-600">🟢</span>
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <Image
+                    src={getChainLogo(order.swapState.toChain)}
+                    alt={order.toToken.symbol}
+                    width={32}
+                    height={32}
+                  />
                 </div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  To:
+                </span>
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
                   {formatAmount(
                     order.swapState.toAmount,
                     order.toToken.decimals
                   )}{" "}
                   {order.toToken.symbol}
-                </span>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  To:
                 </span>
               </div>
             </div>
@@ -254,10 +266,8 @@ export default function OrderCard({ order }: OrderCardProps) {
       </div>
 
       {order.message && (
-        <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-          <p className="text-xs text-blue-700 dark:text-blue-300">
-            {order.message}
-          </p>
+        <div className="mt-2 p-2 bg-dark-600 rounded border border-dark-500 dark:border-dark-500">
+          <p className="text-xs text-white dark:text-white">{order.message}</p>
         </div>
       )}
 
