@@ -12,10 +12,12 @@ const router = express.Router();
 // Smart wallet routes
 router.post("/", createSmartWallet);
 router.get("/", getSmartWallets);
-router.get("/:id", getSmartWalletById);
 
 // Transaction tracking routes
 router.post("/track-transaction", trackTransaction);
 router.get("/transactions", getSmartWalletTransactions);
+
+// Smart wallet by ID (must be last to avoid conflicts)
+router.get("/:id", getSmartWalletById);
 
 export default router;

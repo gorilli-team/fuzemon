@@ -76,6 +76,11 @@ export const getSmartWalletById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    // Validate ObjectId format
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ error: "Invalid smart wallet ID format" });
+    }
+
     const smartWallet = await SmartWallet.findById(id);
     if (!smartWallet) {
       return res.status(404).json({ error: "Smart wallet not found" });
