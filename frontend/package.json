@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@1inch/cross-chain-sdk": "github:21inches/cross-chain-sdk",
+    "@1inch/cross-chain-sdk": "git+https://github.com/21inches/cross-chain-sdk.git",
     "@coinbase/onchainkit": "^1.1.1",
     "@heroicons/react": "^2.2.0",
     "@privy-io/react-auth": "^3.3.0",
