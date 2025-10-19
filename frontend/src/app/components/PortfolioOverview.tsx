@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAccount } from "wagmi";
+import { usePortfolio } from "../hooks/usePortfolio";
 import {
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
@@ -40,140 +41,6 @@ interface Transaction {
   };
 }
 
-// Real transaction data from your database
-const realTransactionData: Transaction[] = [
-  {
-    _id: "68f46dae6307f210aa775c75",
-    smartWalletAddress: "0x091c9a51D6eB9dcB8BFEd2B8041DD8D6DF974A0E",
-    tokenSymbol: "USDC",
-    tokenAmount: 1000,
-    tokenPrice: 1,
-    action: "deposit",
-    usdValue: 1000,
-    txHash:
-      "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-    timestamp: 1760845726,
-    status: "completed",
-    metadata: {
-      source: "manual",
-    },
-  },
-  {
-    _id: "68f46dae6307f210aa775c76",
-    smartWalletAddress: "0x091c9a51D6eB9dcB8BFEd2B8041DD8D6DF974A0E",
-    tokenSymbol: "CHOG",
-    tokenAmount: 500,
-    tokenPrice: 0.5,
-    action: "buy",
-    usdValue: 250,
-    txHash:
-      "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
-    timestamp: 1760847526,
-    status: "completed",
-    metadata: {
-      source: "trading",
-      signalId: "signal_001",
-    },
-  },
-  {
-    _id: "68f46dae6307f210aa775c77",
-    smartWalletAddress: "0x091c9a51D6eB9dcB8BFEd2B8041DD8D6DF974A0E",
-    tokenSymbol: "USDC",
-    tokenAmount: 100,
-    tokenPrice: 1,
-    action: "withdraw",
-    usdValue: 100,
-    txHash:
-      "0x9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba",
-    timestamp: 1760848426,
-    status: "completed",
-    metadata: {
-      source: "manual",
-    },
-  },
-  {
-    _id: "68f4778cccc463775e557e01",
-    smartWalletAddress: "0x123",
-    tokenSymbol: "ETH",
-    tokenAmount: 1,
-    tokenPrice: 0,
-    action: "buy",
-    usdValue: 0,
-    txHash: "0xabc",
-    timestamp: 1760851852,
-    status: "completed",
-    metadata: {
-      source: "smart-wallet",
-      signalId: null,
-    },
-  },
-  {
-    _id: "68f47790ccc463775e557e04",
-    smartWalletAddress: "0x123",
-    tokenSymbol: "ETH",
-    tokenAmount: 1,
-    tokenPrice: 0,
-    action: "buy",
-    usdValue: 0,
-    txHash: "0xdef",
-    timestamp: 1760851856,
-    status: "completed",
-    metadata: {
-      source: "smart-wallet",
-      signalId: null,
-    },
-  },
-  {
-    _id: "68f477d2ccc463775e557e07",
-    smartWalletAddress: "0x456",
-    tokenSymbol: "USDC",
-    tokenAmount: 100,
-    tokenPrice: 1,
-    action: "buy",
-    usdValue: 100,
-    txHash: "0xghi",
-    timestamp: 1760851922,
-    status: "completed",
-    metadata: {
-      source: "smart-wallet",
-      signalId: null,
-    },
-  },
-  {
-    _id: "68f477d5ccc463775e557e0a",
-    smartWalletAddress: "0x789",
-    tokenSymbol: "ETH",
-    tokenAmount: 0.5,
-    tokenPrice: 2000,
-    action: "sell",
-    usdValue: 1000,
-    txHash: "0xjkl",
-    timestamp: 1760851925,
-    status: "completed",
-    metadata: {
-      source: "smart-wallet",
-      signalId: null,
-    },
-  },
-  {
-    _id: "68f47841ccc463775e557e15",
-    smartWalletAddress: "0x091c9a51D6eB9dcB8BFEd2B8041DD8D6DF974A0E",
-    tokenSymbol: "CHOG",
-    tokenAmount: 30000000000000000, // Raw amount in wei
-    tokenPrice: 0.209402261828,
-    action: "buy",
-    usdValue: 6282.07, // Corrected USD value (30,000 CHOG * 0.209402261828)
-    txHash:
-      "0x0e016bcfd8cdcd2111da45a8cbf8eb4ac3dd8b9ee4d0208bf884a7a85cf0cbff",
-    timestamp: 1760852033,
-    status: "completed",
-    metadata: {
-      source: "smart-wallet",
-      signalId: null,
-    },
-  },
-];
-
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
 export default function PortfolioOverview() {
@@ -181,53 +48,55 @@ export default function PortfolioOverview() {
   const [selectedWallet, setSelectedWallet] = useState<string>("");
   const [chartType, setChartType] = useState<"line" | "bar" | "pie">("line");
 
-  // Get unique smart wallet addresses
-  const smartWallets = Array.from(
-    new Set(realTransactionData.map((tx) => tx.smartWalletAddress))
-  );
+  // Use the portfolio hook to fetch real data from backend
+  const {
+    transactions: walletTransactions,
+    metrics,
+    tokenHoldings,
+    smartWallets,
+    loading,
+    error,
+  } = usePortfolio(selectedWallet);
 
-  // Filter transactions by selected wallet
-  const walletTransactions = selectedWallet
-    ? realTransactionData.filter(
-        (tx) => tx.smartWalletAddress === selectedWallet
-      )
-    : realTransactionData;
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <h3 className="text-lg font-semibold text-white mb-2">
+            Loading Portfolio Data
+          </h3>
+          <p className="text-gray-400">
+            Fetching your transaction history from the database
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  // Calculate portfolio metrics with proper USD value handling
-  const calculatePortfolioMetrics = () => {
-    // USD values are already in correct format, no decimal conversion needed
-    const totalDeposits = walletTransactions
-      .filter((tx) => tx.action === "deposit")
-      .reduce((sum, tx) => sum + tx.usdValue, 0);
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h3 className="text-lg font-semibold text-white mb-2">
+            Error Loading Portfolio
+          </h3>
+          <p className="text-gray-400 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-    const totalWithdrawals = walletTransactions
-      .filter((tx) => tx.action === "withdraw")
-      .reduce((sum, tx) => sum + tx.usdValue, 0);
-
-    const totalBuys = walletTransactions
-      .filter((tx) => tx.action === "buy")
-      .reduce((sum, tx) => sum + tx.usdValue, 0);
-
-    const totalSells = walletTransactions
-      .filter((tx) => tx.action === "sell")
-      .reduce((sum, tx) => sum + tx.usdValue, 0);
-
-    const netValue = totalDeposits + totalSells - totalWithdrawals - totalBuys;
-    const totalTransactions = walletTransactions.length;
-
-    return {
-      totalDeposits,
-      totalWithdrawals,
-      totalBuys,
-      totalSells,
-      netValue,
-      totalTransactions,
-    };
-  };
-
-  const metrics = calculatePortfolioMetrics();
-
-  // Token decimals mapping (common tokens)
+  // Token decimals mapping for chart display
   const tokenDecimals: { [key: string]: number } = {
     USDC: 6,
     USDT: 6,
@@ -238,55 +107,16 @@ export default function PortfolioOverview() {
     MONAD: 18,
   };
 
-  // Calculate token holdings with proper decimal handling
-  const calculateTokenHoldings = () => {
-    const holdings: {
-      [key: string]: { amount: number; totalValue: number; totalCost: number };
-    } = {};
-
-    walletTransactions.forEach((tx) => {
-      if (!holdings[tx.tokenSymbol]) {
-        holdings[tx.tokenSymbol] = { amount: 0, totalValue: 0, totalCost: 0 };
-      }
-
-      // Convert token amount from wei to human readable format
-      const decimals = tokenDecimals[tx.tokenSymbol] || 18;
-      const humanReadableAmount = tx.tokenAmount / Math.pow(10, decimals);
-
-      if (tx.action === "deposit" || tx.action === "buy") {
-        holdings[tx.tokenSymbol].amount += humanReadableAmount;
-        holdings[tx.tokenSymbol].totalCost += tx.usdValue;
-      } else if (tx.action === "withdraw" || tx.action === "sell") {
-        holdings[tx.tokenSymbol].amount -= humanReadableAmount;
-        holdings[tx.tokenSymbol].totalCost -= tx.usdValue;
-      }
-    });
-
-    return Object.entries(holdings)
-      .filter(([_, data]) => data.amount > 0)
-      .map(([symbol, data]) => {
-        // For display purposes, use current market value estimation
-        // In a real app, you'd fetch current prices
-        const estimatedValue = data.totalCost; // Simplified: use cost as current value
-        const avgPrice = data.amount > 0 ? data.totalCost / data.amount : 0;
-
-        return {
-          symbol,
-          amount: data.amount,
-          value: estimatedValue,
-          avgPrice: avgPrice,
-        };
-      });
-  };
-
-  const tokenHoldings = calculateTokenHoldings();
-
   // Prepare chart data with proper decimal formatting
   const chartData = walletTransactions
     .sort((a, b) => a.timestamp - b.timestamp)
     .map((tx, index) => {
-      const decimals = tokenDecimals[tx.tokenSymbol] || 18;
-      const humanReadableAmount = tx.tokenAmount / Math.pow(10, decimals);
+      // Check if tokenAmount is already in human-readable format
+      // If it's a very large number (> 1e15), it's likely in wei format
+      const isWeiFormat = tx.tokenAmount > 1e15;
+      const humanReadableAmount = isWeiFormat
+        ? tx.tokenAmount / Math.pow(10, tokenDecimals[tx.tokenSymbol] || 18)
+        : tx.tokenAmount;
 
       return {
         timestamp: tx.timestamp,
@@ -526,10 +356,10 @@ export default function PortfolioOverview() {
             <span className="text-sm text-gray-400">Net Value</span>
           </div>
           <div className="text-2xl font-bold text-white mb-1">
-            {formatValue(metrics.netValue)}
+            {formatValue(metrics?.netValue || 0)}
           </div>
           <div className="text-sm text-gray-400">
-            {metrics.totalTransactions} transactions
+            {metrics?.totalTransactions || 0} transactions
           </div>
         </div>
 
@@ -541,7 +371,7 @@ export default function PortfolioOverview() {
             <span className="text-sm text-gray-400">Total Deposits</span>
           </div>
           <div className="text-2xl font-bold text-white mb-1">
-            {formatValue(metrics.totalDeposits)}
+            {formatValue(metrics?.totalDeposits || 0)}
           </div>
           <div className="text-sm text-gray-400">Incoming funds</div>
         </div>
@@ -554,7 +384,7 @@ export default function PortfolioOverview() {
             <span className="text-sm text-gray-400">Total Buys</span>
           </div>
           <div className="text-2xl font-bold text-white mb-1">
-            {formatValue(metrics.totalBuys)}
+            {formatValue(metrics?.totalBuys || 0)}
           </div>
           <div className="text-sm text-gray-400">Trading activity</div>
         </div>
@@ -567,7 +397,7 @@ export default function PortfolioOverview() {
             <span className="text-sm text-gray-400">Total Sells</span>
           </div>
           <div className="text-2xl font-bold text-white mb-1">
-            {formatValue(metrics.totalSells)}
+            {formatValue(metrics?.totalSells || 0)}
           </div>
           <div className="text-sm text-gray-400">Exit positions</div>
         </div>
