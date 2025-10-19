@@ -163,7 +163,7 @@ export function SmartWalletTrading({
               onClick={() => setIsBuying(true)}
               className={`px-4 py-2 rounded-lg font-medium ${
                 isBuying
-                  ? "bg-green-600 text-white"
+                  ? "bg-purple-600 text-white"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
             >
@@ -174,7 +174,7 @@ export function SmartWalletTrading({
               onClick={() => setIsBuying(false)}
               className={`px-4 py-2 rounded-lg font-medium ${
                 !isBuying
-                  ? "bg-red-600 text-white"
+                  ? "bg-purple-600 text-white"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
             >
@@ -232,7 +232,7 @@ export function SmartWalletTrading({
               type="button"
               onClick={handleDeposit}
               disabled={loading || !amount}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
             >
               Deposit USDC
             </button>
@@ -240,7 +240,7 @@ export function SmartWalletTrading({
               type="button"
               onClick={handleWithdraw}
               disabled={loading || !amount}
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
             >
               Withdraw USDC
             </button>
@@ -249,7 +249,7 @@ export function SmartWalletTrading({
           <button
             type="submit"
             disabled={loading || !amount || !tokenOut}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
           >
             {loading ? "Processing..." : `${isBuying ? "Buy" : "Sell"} Tokens`}
           </button>
