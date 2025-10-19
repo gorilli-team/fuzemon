@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 export default function Sidebar() {
@@ -47,14 +48,36 @@ export default function Sidebar() {
               <span>Orders</span>
             </Link>
           </li>
+          <li>
+            <Link
+              href="/tokens"
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 block ${
+                pathname.startsWith("/tokens") ? "bg-dark-700 text-white" : ""
+              }`}
+            >
+              <i className="fa-solid fa-coins pr-2"></i>
+              <span>Tokens</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/chart-test"
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 block ${
+                pathname === "/chart-test" ? "bg-dark-700 text-white" : ""
+              }`}
+            >
+              <i className="fa-solid fa-chart-candlestick pr-2"></i>
+              <span>Chart Test</span>
+            </Link>
+          </li>
         </ul>
       </nav>
 
       {/* Footer */}
       <div className="border-t border-dark-600 p-4">
-        <div className="flex items-center pl-3 text-xs text-dark-200">
+        <div className="flex items-center pl-3 mt-4 text-xs text-dark-200">
           <span className="mr-2">Powered by</span>
-          <span className="text-accent-purple font-semibold">Fuzemon</span>
+          <Image src="/gorilliLogo.svg" alt="Gorilli" width={70} height={70} />
         </div>
       </div>
     </aside>

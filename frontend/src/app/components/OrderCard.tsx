@@ -67,7 +67,7 @@ export default function OrderCard({ order }: OrderCardProps) {
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-dark-100 text-dark-800">
             {status}
           </span>
         );
@@ -87,7 +87,7 @@ export default function OrderCard({ order }: OrderCardProps) {
       case "FAILED":
         return "border-red-200 bg-red-50";
       default:
-        return "border-gray-200 bg-gray-50";
+        return "border-dark-200 bg-dark-50";
     }
   };
 
@@ -113,9 +113,9 @@ export default function OrderCard({ order }: OrderCardProps) {
     >
       <ArrowTopRightOnSquareIcon className={iconClassName} />
       {showTooltip && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-dark-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
           {tooltip}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-dark-900"></div>
         </div>
       )}
     </a>
@@ -130,12 +130,12 @@ export default function OrderCard({ order }: OrderCardProps) {
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-2">
           {getStatusBadge(order.status)}
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-dark-500 dark:text-dark-400">
             {formatDate(order.createdAt)}
           </span>
         </div>
         {order.orderHash && (
-          <span className="text-xs text-gray-400 dark:text-gray-500 font-mono bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+          <span className="text-xs text-dark-400 dark:text-dark-500 font-mono bg-dark-100 dark:bg-dark-700 px-1.5 py-0.5 rounded">
             {order.orderHash.slice(0, 6)}...{order.orderHash.slice(-4)}
           </span>
         )}
@@ -143,16 +143,16 @@ export default function OrderCard({ order }: OrderCardProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-3">
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+          <h3 className="text-xs font-semibold text-dark-700 dark:text-dark-300 uppercase tracking-wide">
             Trade Details
           </h3>
-          <div className="p-3 bg-white dark:bg-gray-600 rounded">
+          <div className="p-3 bg-white dark:bg-dark-600 rounded">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-dark-600 dark:text-dark-400">
                   From:
                 </span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                <span className="text-sm font-medium text-dark-900 dark:text-white">
                   {formatAmount(
                     order.swapState.fromAmount,
                     order.fromToken.decimals
@@ -170,9 +170,9 @@ export default function OrderCard({ order }: OrderCardProps) {
               </div>
 
               <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-gray-100 dark:bg-gray-500 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 bg-dark-100 dark:bg-dark-500 rounded-full flex items-center justify-center">
                   <svg
-                    className="w-3 h-3 text-gray-600 dark:text-gray-300"
+                    className="w-3 h-3 text-dark-600 dark:text-dark-300"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -196,10 +196,10 @@ export default function OrderCard({ order }: OrderCardProps) {
                     height={32}
                   />
                 </div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-dark-600 dark:text-dark-400">
                   To:
                 </span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                <span className="text-sm font-medium text-dark-900 dark:text-white">
                   {formatAmount(
                     order.swapState.toAmount,
                     order.toToken.decimals
@@ -210,10 +210,10 @@ export default function OrderCard({ order }: OrderCardProps) {
             </div>
 
             <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-dark-500 dark:text-dark-400">
                 Chain ID: {order.swapState.fromChain}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-dark-500 dark:text-dark-400">
                 Chain ID: {order.swapState.toChain}
               </span>
             </div>
@@ -223,7 +223,7 @@ export default function OrderCard({ order }: OrderCardProps) {
         {order.transactions && Object.keys(order.transactions).length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+              <h3 className="text-xs font-semibold text-dark-700 dark:text-dark-300 uppercase tracking-wide">
                 Transaction links:
               </h3>
               <div className="flex items-center space-x-2">
@@ -279,7 +279,7 @@ export default function OrderCard({ order }: OrderCardProps) {
         </div>
       )}
 
-      <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+      <div className="mt-2 flex items-center justify-between text-xs text-dark-500 dark:text-dark-400">
         <span>ID: {order.id}</span>
         <div className="flex space-x-2">
           {order.completedAt && <span>✓ {formatDate(order.completedAt)}</span>}
