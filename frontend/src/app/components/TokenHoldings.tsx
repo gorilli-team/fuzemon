@@ -187,7 +187,7 @@ export default function TokenHoldings() {
           <div className="w-16 h-16 mx-auto mb-4 bg-dark-700 rounded-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
           </div>
-          <p className="text-gray-400">Loading...</p>
+          <p className="text-dark-400">Loading...</p>
         </div>
       </div>
     );
@@ -202,7 +202,7 @@ export default function TokenHoldings() {
         <div className="text-center py-8">
           <div className="w-16 h-16 mx-auto mb-4 bg-dark-700 rounded-full flex items-center justify-center">
             <svg
-              className="w-8 h-8 text-gray-400"
+              className="w-8 h-8 text-dark-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -215,7 +215,7 @@ export default function TokenHoldings() {
               />
             </svg>
           </div>
-          <p className="text-gray-400">
+          <p className="text-dark-400">
             Connect your wallet to view token holdings
           </p>
         </div>
@@ -228,7 +228,7 @@ export default function TokenHoldings() {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-white">Token Holdings</h3>
         <div className="text-right">
-          <p className="text-sm text-gray-400">Total Value</p>
+          <p className="text-sm text-dark-400">Total Value</p>
           <p className="text-lg font-bold text-white">${getTotalValue()}</p>
         </div>
       </div>
@@ -241,13 +241,13 @@ export default function TokenHoldings() {
               className="flex items-center justify-between p-3 bg-dark-700 rounded-lg animate-pulse"
             >
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gray-600 rounded-full"></div>
+                <div className="w-8 h-8 bg-dark-600 rounded-full"></div>
                 <div>
-                  <div className="h-4 bg-gray-600 rounded w-16 mb-1"></div>
-                  <div className="h-3 bg-gray-600 rounded w-12"></div>
+                  <div className="h-4 bg-dark-600 rounded w-16 mb-1"></div>
+                  <div className="h-3 bg-dark-600 rounded w-12"></div>
                 </div>
               </div>
-              <div className="h-4 bg-gray-600 rounded w-20"></div>
+              <div className="h-4 bg-dark-600 rounded w-20"></div>
             </div>
           ))}
         </div>
@@ -272,7 +272,7 @@ export default function TokenHoldings() {
                       target.style.display = "none";
                       const parent = target.parentElement;
                       if (parent) {
-                        parent.innerHTML = `<div class="w-full h-full bg-gray-600 rounded-full flex items-center justify-center"><span class="text-xs font-bold text-white">${
+                        parent.innerHTML = `<div class="w-full h-full bg-dark-600 rounded-full flex items-center justify-center"><span class="text-xs font-bold text-white">${
                           token.symbol === "ETH" ? "Ξ" : "$"
                         }</span></div>`;
                       }
@@ -281,14 +281,14 @@ export default function TokenHoldings() {
                 </div>
                 <div>
                   <p className="text-white font-medium">{token.symbol}</p>
-                  <p className="text-gray-400 text-sm">{token.name}</p>
+                  <p className="text-dark-400 text-sm">{token.name}</p>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-white font-semibold">
                   {formatBalance(balance)}
                 </p>
-                <p className="text-gray-400 text-sm">
+                <p className="text-dark-400 text-sm">
                   {token.symbol === "ETH" ? "ETH" : "USDC"}
                 </p>
               </div>
@@ -299,11 +299,11 @@ export default function TokenHoldings() {
 
       <div className="mt-4 pt-4 border-t border-dark-600">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-400">Network:</span>
+          <span className="text-dark-400">Network:</span>
           <span className="text-white">Ethereum Sepolia</span>
         </div>
         <div className="flex items-center justify-between text-sm mt-1">
-          <span className="text-gray-400">Address:</span>
+          <span className="text-dark-400">Address:</span>
           <span className="text-white font-mono text-xs">
             {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
           </span>
