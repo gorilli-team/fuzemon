@@ -159,10 +159,10 @@ const realTransactionData: Transaction[] = [
     _id: "68f47841ccc463775e557e15",
     smartWalletAddress: "0x091c9a51D6eB9dcB8BFEd2B8041DD8D6DF974A0E",
     tokenSymbol: "CHOG",
-    tokenAmount: 30000000000000000,
+    tokenAmount: 30000000000000000, // Raw amount in wei
     tokenPrice: 0.209402261828,
     action: "buy",
-    usdValue: 6282067854840000,
+    usdValue: 6282.07, // Corrected USD value (30,000 CHOG * 0.209402261828)
     txHash:
       "0x0e016bcfd8cdcd2111da45a8cbf8eb4ac3dd8b9ee4d0208bf884a7a85cf0cbff",
     timestamp: 1760852033,
@@ -193,8 +193,9 @@ export default function PortfolioOverview() {
       )
     : realTransactionData;
 
-  // Calculate portfolio metrics
+  // Calculate portfolio metrics with proper USD value handling
   const calculatePortfolioMetrics = () => {
+    // USD values are already in correct format, no decimal conversion needed
     const totalDeposits = walletTransactions
       .filter((tx) => tx.action === "deposit")
       .reduce((sum, tx) => sum + tx.usdValue, 0);
@@ -239,12 +240,13 @@ export default function PortfolioOverview() {
 
   // Calculate token holdings with proper decimal handling
   const calculateTokenHoldings = () => {
-    const holdings: { [key: string]: { amount: number; totalValue: number } } =
-      {};
+    const holdings: {
+      [key: string]: { amount: number; totalValue: number; totalCost: number };
+    } = {};
 
     walletTransactions.forEach((tx) => {
       if (!holdings[tx.tokenSymbol]) {
-        holdings[tx.tokenSymbol] = { amount: 0, totalValue: 0 };
+        holdings[tx.tokenSymbol] = { amount: 0, totalValue: 0, totalCost: 0 };
       }
 
       // Convert token amount from wei to human readable format
@@ -253,21 +255,28 @@ export default function PortfolioOverview() {
 
       if (tx.action === "deposit" || tx.action === "buy") {
         holdings[tx.tokenSymbol].amount += humanReadableAmount;
-        holdings[tx.tokenSymbol].totalValue += tx.usdValue;
+        holdings[tx.tokenSymbol].totalCost += tx.usdValue;
       } else if (tx.action === "withdraw" || tx.action === "sell") {
         holdings[tx.tokenSymbol].amount -= humanReadableAmount;
-        holdings[tx.tokenSymbol].totalValue -= tx.usdValue;
+        holdings[tx.tokenSymbol].totalCost -= tx.usdValue;
       }
     });
 
     return Object.entries(holdings)
       .filter(([_, data]) => data.amount > 0)
-      .map(([symbol, data]) => ({
-        symbol,
-        amount: data.amount,
-        value: data.totalValue,
-        avgPrice: data.totalValue / data.amount,
-      }));
+      .map(([symbol, data]) => {
+        // For display purposes, use current market value estimation
+        // In a real app, you'd fetch current prices
+        const estimatedValue = data.totalCost; // Simplified: use cost as current value
+        const avgPrice = data.amount > 0 ? data.totalCost / data.amount : 0;
+
+        return {
+          symbol,
+          amount: data.amount,
+          value: estimatedValue,
+          avgPrice: avgPrice,
+        };
+      });
   };
 
   const tokenHoldings = calculateTokenHoldings();
@@ -350,7 +359,14 @@ export default function PortfolioOverview() {
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => formatValue(value)}
+                tickFormatter={(value) => {
+                  if (value >= 1000000) {
+                    return `$${(value / 1000000).toFixed(1)}M`;
+                  } else if (value >= 1000) {
+                    return `$${(value / 1000).toFixed(1)}K`;
+                  }
+                  return `$${value.toFixed(0)}`;
+                }}
               />
               <Tooltip content={<CustomTooltip />} />
               <Line
@@ -388,7 +404,14 @@ export default function PortfolioOverview() {
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => formatValue(value)}
+                tickFormatter={(value) => {
+                  if (value >= 1000000) {
+                    return `$${(value / 1000000).toFixed(1)}M`;
+                  } else if (value >= 1000) {
+                    return `$${(value / 1000).toFixed(1)}K`;
+                  }
+                  return `$${value.toFixed(0)}`;
+                }}
               />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
