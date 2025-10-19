@@ -84,7 +84,7 @@ export default function SmartWalletManager() {
         body: JSON.stringify({
           userWallet: user,
           smartWallet,
-          chainId: 11155111, // Monad Testnet
+          chainId: 10143, // Monad Testnet
         }),
       });
 

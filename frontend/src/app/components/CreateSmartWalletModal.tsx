@@ -25,18 +25,39 @@ export function CreateSmartWalletModal({
 
     // Use environment variables for smart wallet parameters
     const usdc = process.env.NEXT_PUBLIC_USDC_ADDRESS_MONAD;
-    const universalRouter = process.env.NEXT_PUBLIC_UNIVERSAL_ROUTER_ADDRESS;
-    const poolManager = process.env.NEXT_PUBLIC_POOL_MANAGER_ADDRESS;
-    const permit2 = process.env.NEXT_PUBLIC_PERMIT2_ADDRESS;
+    const universalRouter = process.env.NEXT_PUBLIC_UNIVERSAL_ROUTER_MONAD;
+    const poolManager = process.env.NEXT_PUBLIC_POOL_MANAGER_MONAD;
+    const permit2 = process.env.NEXT_PUBLIC_PERMIT2_MONAD;
+
+    console.log("Environment variables:", {
+      usdc,
+      universalRouter,
+      poolManager,
+      permit2,
+    });
 
     if (!usdc || !universalRouter || !poolManager || !permit2) {
       console.error(
-        "Missing required environment variables for smart wallet creation"
+        "Missing required environment variables for smart wallet creation",
+        {
+          usdc: !!usdc,
+          universalRouter: !!universalRouter,
+          poolManager: !!poolManager,
+          permit2: !!permit2,
+        }
+      );
+      alert(
+        "Missing required environment variables. Please check your .env.local file."
       );
       return;
     }
 
-    await onCreate(usdc, universalRouter, poolManager, permit2);
+    try {
+      await onCreate(usdc, universalRouter, poolManager, permit2);
+    } catch (error) {
+      console.error("Error in CreateSmartWalletModal:", error);
+      alert("Failed to create smart wallet. Check console for details.");
+    }
   };
 
   if (!isOpen) return null;
@@ -55,32 +76,31 @@ export function CreateSmartWalletModal({
           </button>
         </div>
 
-        <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-          <h4 className="text-sm font-medium text-purple-900 mb-2">
-            Smart Wallet Configuration
-          </h4>
-          <div className="text-xs text-purple-700 space-y-1">
-            <p>
-              <strong>USDC:</strong>{" "}
-              {process.env.NEXT_PUBLIC_USDC_ADDRESS_MONAD || "Not configured"}
-            </p>
-            <p>
-              <strong>Universal Router:</strong>{" "}
-              {process.env.NEXT_PUBLIC_UNIVERSAL_ROUTER_ADDRESS ||
-                "Not configured"}
-            </p>
-            <p>
-              <strong>Pool Manager:</strong>{" "}
-              {process.env.NEXT_PUBLIC_POOL_MANAGER_ADDRESS || "Not configured"}
-            </p>
-            <p>
-              <strong>Permit2:</strong>{" "}
-              {process.env.NEXT_PUBLIC_PERMIT2_ADDRESS || "Not configured"}
-            </p>
-          </div>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+            <h4 className="text-sm font-medium text-purple-900 mb-2">
+              Smart Wallet Configuration
+            </h4>
+            <div className="text-xs text-purple-700 space-y-1">
+              <p>
+                <strong>USDC:</strong>{" "}
+                {process.env.NEXT_PUBLIC_USDC_ADDRESS_MONAD || "Not configured"}
+              </p>
+              <p>
+                <strong>Universal Router:</strong>{" "}
+                {process.env.NEXT_PUBLIC_UNIVERSAL_ROUTER_MONAD ||
+                  "Not configured"}
+              </p>
+              <p>
+                <strong>Pool Manager:</strong>{" "}
+                {process.env.NEXT_PUBLIC_POOL_MANAGER_MONAD || "Not configured"}
+              </p>
+              <p>
+                <strong>Permit2:</strong>{" "}
+                {process.env.NEXT_PUBLIC_PERMIT2_MONAD || "Not configured"}
+              </p>
+            </div>
+          </div>
           <div className="flex gap-3 pt-4">
             <button
               type="button"
