@@ -37,6 +37,7 @@ export function SmartWalletTokenTrading({
   const [usdcAmount, setUsdcAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const {
     buyTokens,
@@ -111,6 +112,49 @@ export function SmartWalletTokenTrading({
     }
   }, [usdcAmount, currentPrice]);
 
+  // Function to play success sound and show alert
+  const playSuccessSound = () => {
+    try {
+      // Create a simple success sound using Web Audio API
+      const audioContext = new (window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
+      oscillator.frequency.setValueAtTime(1200, audioContext.currentTime + 0.2);
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioContext.currentTime + 0.3
+      );
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      console.log("Could not play sound:", error);
+    }
+  };
+
+  const showSuccessAlert = (message: string) => {
+    setSuccess(message);
+    playSuccessSound();
+
+    // Show browser alert as well
+    alert(`🎉 SUCCESS! ${message}`);
+
+    // Clear success message after 5 seconds
+    setTimeout(() => {
+      setSuccess(null);
+    }, 5000);
+  };
+
   const handleTrading = async () => {
     if (!selectedSmartWallet || !amount) return;
 
@@ -179,7 +223,9 @@ export function SmartWalletTokenTrading({
           selectedSmartWallet.smartWallet as `0x${string}`,
           tokenAddress,
           tokenAmountBigInt,
-          usdcAmountBigInt
+          usdcAmountBigInt,
+          tokenSymbol,
+          currentPrice
         );
 
         console.log("✅ Buy transaction submitted:", txHash);
@@ -201,13 +247,22 @@ export function SmartWalletTokenTrading({
           selectedSmartWallet.smartWallet as `0x${string}`,
           tokenAddress,
           tokenAmountBigInt,
-          usdcAmountBigInt
+          usdcAmountBigInt,
+          tokenSymbol,
+          currentPrice
         );
 
         console.log("✅ Sell transaction submitted:", txHash);
       }
 
       console.log("🎉 Trade execution completed successfully!");
+
+      // Show success alert with sound
+      const successMessage = `${
+        tradingType === "buy" ? "Bought" : "Sold"
+      } ${amount} ${tokenSymbol} for ${usdcAmount} USDC`;
+      showSuccessAlert(successMessage);
+
       setShowTradingModal(false);
       setAmount("");
       setUsdcAmount("");
@@ -323,6 +378,13 @@ export function SmartWalletTokenTrading({
         </select>
       </div>
 
+      {/* Success Message */}
+      {success && (
+        <div className="mb-4 p-3 bg-green-900/20 border border-green-500 rounded-lg">
+          <p className="text-green-400 text-sm">🎉 {success}</p>
+        </div>
+      )}
+
       {/* USDC Balance */}
       {selectedSmartWallet && usdcBalance && (
         <div className="mb-4 p-3 bg-dark-700 rounded-lg">
@@ -398,6 +460,12 @@ export function SmartWalletTokenTrading({
             {error && (
               <div className="mb-4 p-3 bg-red-900/20 border border-red-500 rounded-lg">
                 <p className="text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-4 p-3 bg-green-900/20 border border-green-500 rounded-lg">
+                <p className="text-green-400 text-sm">🎉 {success}</p>
               </div>
             )}
 
