@@ -22,7 +22,7 @@ export const createOrder = asyncHandler(
 
     const order = await Order.create(orderData);
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       data: order,
       message: "Order created successfully",
@@ -65,7 +65,7 @@ export const getOrders = asyncHandler(
 
     const totalPages = Math.ceil(total / limit);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: orders,
       pagination: {
@@ -92,7 +92,7 @@ export const getOrderById = asyncHandler(
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: order,
     });
@@ -122,7 +122,7 @@ export const updateOrder = asyncHandler(
 
     await order.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: order,
       message: "Order updated successfully",
@@ -146,9 +146,9 @@ export const updateOrderStatus = asyncHandler(
       });
     }
 
-    await order.updateStatus(status, message, error);
+    await (order as any).updateStatus(status, message, error);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: order,
       message: "Order status updated successfully",
@@ -172,7 +172,7 @@ export const deleteOrder = asyncHandler(
 
     await Order.deleteOne({ id: req.params.id });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Order deleted successfully",
     });
@@ -204,7 +204,7 @@ export const getOrdersByUser = asyncHandler(
 
     const totalPages = Math.ceil(total / limit);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: orders,
       pagination: {
@@ -231,7 +231,7 @@ export const getOrderByHash = asyncHandler(
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: order,
     });

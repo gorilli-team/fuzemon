@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
-import CandlestickChart from "@/app/components/CandlestickChart";
+import CandlestickChart from "../../components/CandlestickChart";
+import { SmartWalletTokenTrading } from "../../components/SmartWalletTokenTrading";
 import { Time } from "lightweight-charts";
 import monadPricesData from "../../../../data/prices_monad.json";
 import wethPricesData from "../../../../data/prices_weth.json";
@@ -998,6 +999,20 @@ export default function TokenPage() {
               signals={signals}
             />
           </div>
+        </div>
+
+        {/* Smart Wallet Trading Section */}
+        <div className="mb-8">
+          <SmartWalletTokenTrading
+            tokenAddress={token.address}
+            tokenSymbol={token.symbol}
+            tokenName={token.name}
+            currentPrice={pricePoints?.current || 0}
+            onTransactionComplete={() => {
+              // Refresh data after transaction
+              window.location.reload();
+            }}
+          />
         </div>
 
         {/* Signals Section */}
