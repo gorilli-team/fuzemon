@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import { errorHandler, notFound } from "./middleware/errorHandler";
 import orderRoutes from "./routes/orderRoutes";
+import smartWalletRoutes from "./routes/smartWalletRoutes";
 
 const app: Application = express();
 
@@ -42,6 +43,7 @@ app.get("/health", (req, res) => {
 
 // API routes
 app.use("/api/orders", orderRoutes);
+app.use("/api/smart-wallet", smartWalletRoutes);
 
 // 404 handler
 app.use(notFound);

@@ -59,6 +59,19 @@ export default function Sidebar() {
               <span>Tokens</span>
             </Link>
           </li>
+          <li>
+            <Link
+              href="/smart-wallet"
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 block ${
+                pathname.startsWith("/smart-wallet")
+                  ? "bg-dark-700 text-white"
+                  : ""
+              }`}
+            >
+              <i className="fa-solid fa-wallet pr-2"></i>
+              <span>Smart Wallet</span>
+            </Link>
+          </li>
         </ul>
       </nav>
 
