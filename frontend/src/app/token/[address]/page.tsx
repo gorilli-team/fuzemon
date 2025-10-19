@@ -5,7 +5,9 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import CandlestickChart from "@/app/components/CandlestickChart";
 import { Time } from "lightweight-charts";
-import pricesData from "../../../../data/prices_all_tokens.json";
+import monadPricesData from "../../../../data/prices_monad.json";
+import wethPricesData from "../../../../data/prices_weth.json";
+import chogPricesData from "../../../../data/prices_chog.json";
 
 interface TokenData {
   name: string;
@@ -132,13 +134,28 @@ export default function TokenPage() {
   );
 
   // Process real price data for all tokens
-  const getRealPriceData = (symbol: string, address: string): PriceData[] => {
-    // Get the price data for the specific token
-    const tokenPrices = (
-      pricesData as Record<string, Record<string, MonadPriceData[]>>
-    )[symbol];
-    if (tokenPrices && tokenPrices[address]) {
-      const monadPrices = tokenPrices[address];
+  const getRealPriceData = (symbol: string): PriceData[] => {
+    // Get the appropriate price data based on token symbol
+    let pricesData: Record<string, MonadPriceData[]>;
+
+    switch (symbol) {
+      case "MON":
+        pricesData = monadPricesData as Record<string, MonadPriceData[]>;
+        break;
+      case "WETH":
+        pricesData = wethPricesData as Record<string, MonadPriceData[]>;
+        break;
+      case "CHOG":
+        pricesData = chogPricesData as Record<string, MonadPriceData[]>;
+        break;
+      default:
+        return [];
+    }
+
+    if (pricesData) {
+      // Get the first (and only) key which contains the price data
+      const priceDataKey = Object.keys(pricesData)[0];
+      const monadPrices = pricesData[priceDataKey];
 
       // Create proper candlestick data by aggregating time periods
       const candlestickData: MonadPriceData[] = [];
@@ -280,18 +297,44 @@ export default function TokenPage() {
   };
 
   const mockPriceData = useMemo(
-    () => getRealPriceData(mockTokenData.symbol, mockTokenData.address),
-    [mockTokenData.symbol, mockTokenData.address]
+    () => getRealPriceData(mockTokenData.symbol),
+    [mockTokenData.symbol]
   );
 
   // Get price points based on token
-  const getPricePoints = (symbol: string, address: string): PricePoints => {
-    // Get real price data for the specific token
-    const tokenPrices = (
-      pricesData as Record<string, Record<string, MonadPriceData[]>>
-    )[symbol];
-    if (tokenPrices && tokenPrices[address]) {
-      const monadPrices = tokenPrices[address];
+  const getPricePoints = (symbol: string): PricePoints => {
+    // Get the appropriate price data based on token symbol
+    let pricesData: Record<string, MonadPriceData[]>;
+
+    switch (symbol) {
+      case "MON":
+        pricesData = monadPricesData as Record<string, MonadPriceData[]>;
+        break;
+      case "WETH":
+        pricesData = wethPricesData as Record<string, MonadPriceData[]>;
+        break;
+      case "CHOG":
+        pricesData = chogPricesData as Record<string, MonadPriceData[]>;
+        break;
+      default:
+        return {
+          current: 0.5,
+          oneHourAgo: 0.49,
+          sixHoursAgo: 0.48,
+          twentyFourHoursAgo: 0.45,
+          timestamps: {
+            current: new Date().toISOString(),
+            oneHourAgo: new Date(Date.now() - 3600000).toISOString(),
+            sixHoursAgo: new Date(Date.now() - 21600000).toISOString(),
+            twentyFourHoursAgo: new Date(Date.now() - 86400000).toISOString(),
+          },
+        };
+    }
+
+    if (pricesData) {
+      // Get the first (and only) key which contains the price data
+      const priceDataKey = Object.keys(pricesData)[0];
+      const monadPrices = pricesData[priceDataKey];
 
       if (monadPrices.length > 0) {
         // Create proper candlestick data by aggregating time periods
@@ -478,8 +521,8 @@ export default function TokenPage() {
   };
 
   const mockPricePoints = useMemo(
-    () => getPricePoints(mockTokenData.symbol, mockTokenData.address),
-    [mockTokenData.symbol, mockTokenData.address]
+    () => getPricePoints(mockTokenData.symbol),
+    [mockTokenData.symbol]
   );
 
   // Mock completed trades based on token

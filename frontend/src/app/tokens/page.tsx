@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import pricesData from "../../../data/prices_all_tokens.json";
+import monadPricesData from "../../../data/prices_monad.json";
+import wethPricesData from "../../../data/prices_weth.json";
+import chogPricesData from "../../../data/prices_chog.json";
 
 interface TokenData {
   id: number;
@@ -34,12 +36,31 @@ interface MonadPriceData {
 }
 
 // Get real price data for all tokens
-const getRealTokenPrice = (symbol: string, address: string) => {
-  const tokenPrices = (
-    pricesData as Record<string, Record<string, MonadPriceData[]>>
-  )[symbol];
-  if (tokenPrices && tokenPrices[address]) {
-    const monadPrices = tokenPrices[address];
+const getRealTokenPrice = (symbol: string) => {
+  // Get the appropriate price data based on token symbol
+  let pricesData: Record<string, MonadPriceData[]>;
+
+  switch (symbol) {
+    case "MON":
+      pricesData = monadPricesData as Record<string, MonadPriceData[]>;
+      break;
+    case "WETH":
+      pricesData = wethPricesData as Record<string, MonadPriceData[]>;
+      break;
+    case "CHOG":
+      pricesData = chogPricesData as Record<string, MonadPriceData[]>;
+      break;
+    default:
+      return {
+        currentPrice: 0.6,
+        priceChange24h: 5.8,
+      };
+  }
+
+  if (pricesData) {
+    // Get the first (and only) key which contains the price data
+    const priceDataKey = Object.keys(pricesData)[0];
+    const monadPrices = pricesData[priceDataKey];
 
     if (monadPrices.length > 0) {
       // Create proper candlestick data by aggregating time periods
@@ -136,18 +157,18 @@ const getRealTokenPrice = (symbol: string, address: string) => {
   };
 };
 
-const monPriceData = getRealTokenPrice(
-  "MON",
-  "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
-) || { currentPrice: 3.79, priceChange24h: 5.8 };
-const wethPriceData = getRealTokenPrice(
-  "WETH",
-  "0x0000000000000000000000000000000000000000"
-) || { currentPrice: 3249.87, priceChange24h: 1.2 };
-const chogPriceData = getRealTokenPrice(
-  "CHOG",
-  "0xE0590015A873bF326bd645c3E1266d4db41C4E6B"
-) || { currentPrice: 0.000124, priceChange24h: 2.5 };
+const monPriceData = getRealTokenPrice("MON") || {
+  currentPrice: 3.79,
+  priceChange24h: 5.8,
+};
+const wethPriceData = getRealTokenPrice("WETH") || {
+  currentPrice: 3249.87,
+  priceChange24h: 1.2,
+};
+const chogPriceData = getRealTokenPrice("CHOG") || {
+  currentPrice: 0.000124,
+  priceChange24h: 2.5,
+};
 
 // Real tokens from Gorillionaire
 const mockTokens: TokenData[] = [

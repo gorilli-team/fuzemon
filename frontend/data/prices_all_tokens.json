@@ -1,6 +1,6 @@
 {
   "MON": {
-    "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE": [
+    "WITH numbered_prices AS (\n  SELECT *,\n    ROW_NUMBER() OVER (ORDER BY updated_at DESC) as rn\n  FROM prices_monad pm\n  WHERE pm.token_id = '0x5323821de342c56b80c99fbc7cd725f2da8eb87b:10143'\n)\nSELECT *\nFROM numbered_prices\nWHERE rn % 50 = 1\nLIMIT 100": [
       {
         "timestamp": "2025-10-19T03:16:00.000Z",
         "id": 6661913,
@@ -13,7 +13,8 @@
         "close": 3.79027113038,
         "volume": 0e-18,
         "created_at": "2025-10-19T03:16:48.574Z",
-        "updated_at": "2025-10-19T03:16:48.574Z"
+        "updated_at": "2025-10-19T03:16:48.574Z",
+        "rn": 1
       },
       {
         "timestamp": "2025-10-19T02:26:00.000Z",
@@ -27,7 +28,8 @@
         "close": 3.79228479406,
         "volume": 0e-18,
         "created_at": "2025-10-19T02:26:48.779Z",
-        "updated_at": "2025-10-19T02:26:48.779Z"
+        "updated_at": "2025-10-19T02:26:48.779Z",
+        "rn": 2
       },
       {
         "timestamp": "2025-10-19T01:36:00.000Z",
@@ -41,12 +43,13 @@
         "close": 3.79231283052,
         "volume": 0.00813,
         "created_at": "2025-10-19T01:36:48.773Z",
-        "updated_at": "2025-10-19T01:36:48.773Z"
+        "updated_at": "2025-10-19T01:36:48.773Z",
+        "rn": 3
       }
     ]
   },
   "WETH": {
-    "0x0000000000000000000000000000000000000000": [
+    "WITH numbered_prices AS (\n  SELECT *,\n    ROW_NUMBER() OVER (ORDER BY updated_at DESC) as rn\n  FROM prices_weth pw\n  WHERE pw.token_id = '0x0000000000000000000000000000000000000000'\n)\nSELECT *\nFROM numbered_prices\nWHERE rn % 50 = 1\nLIMIT 100": [
       {
         "timestamp": "2025-10-19T03:16:00.000Z",
         "id": 6661914,
@@ -59,7 +62,8 @@
         "close": 3249.87,
         "volume": 1250.45,
         "created_at": "2025-10-19T03:16:48.574Z",
-        "updated_at": "2025-10-19T03:16:48.574Z"
+        "updated_at": "2025-10-19T03:16:48.574Z",
+        "rn": 1
       },
       {
         "timestamp": "2025-10-19T02:26:00.000Z",
@@ -73,7 +77,8 @@
         "close": 3250.45,
         "volume": 980.32,
         "created_at": "2025-10-19T02:26:48.779Z",
-        "updated_at": "2025-10-19T02:26:48.779Z"
+        "updated_at": "2025-10-19T02:26:48.779Z",
+        "rn": 2
       },
       {
         "timestamp": "2025-10-19T01:36:00.000Z",
@@ -87,12 +92,13 @@
         "close": 3249.12,
         "volume": 1150.67,
         "created_at": "2025-10-19T01:36:48.773Z",
-        "updated_at": "2025-10-19T01:36:48.773Z"
+        "updated_at": "2025-10-19T01:36:48.773Z",
+        "rn": 3
       }
     ]
   },
   "CHOG": {
-    "0xE0590015A873bF326bd645c3E1266d4db41C4E6B": [
+    "WITH numbered_prices AS (\n  SELECT *,\n    ROW_NUMBER() OVER (ORDER BY updated_at DESC) as rn\n  FROM prices_chog pc\n  WHERE pc.token_id = '0xE0590015A873bF326bd645c3E1266d4db41C4E6B'\n)\nSELECT *\nFROM numbered_prices\nWHERE rn % 50 = 1\nLIMIT 100": [
       {
         "timestamp": "2025-10-19T03:16:00.000Z",
         "id": 6661915,
@@ -105,7 +111,8 @@
         "close": 0.000124,
         "volume": 2500000.0,
         "created_at": "2025-10-19T03:16:48.574Z",
-        "updated_at": "2025-10-19T03:16:48.574Z"
+        "updated_at": "2025-10-19T03:16:48.574Z",
+        "rn": 1
       },
       {
         "timestamp": "2025-10-19T02:26:00.000Z",
@@ -119,7 +126,8 @@
         "close": 0.000125,
         "volume": 1800000.0,
         "created_at": "2025-10-19T02:26:48.779Z",
-        "updated_at": "2025-10-19T02:26:48.779Z"
+        "updated_at": "2025-10-19T02:26:48.779Z",
+        "rn": 2
       },
       {
         "timestamp": "2025-10-19T01:36:00.000Z",
@@ -133,7 +141,8 @@
         "close": 0.000123,
         "volume": 2200000.0,
         "created_at": "2025-10-19T01:36:48.773Z",
-        "updated_at": "2025-10-19T01:36:48.773Z"
+        "updated_at": "2025-10-19T01:36:48.773Z",
+        "rn": 3
       }
     ]
   }
