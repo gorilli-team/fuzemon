@@ -1,6 +1,6 @@
 import { Address, Immutables } from "@1inch/cross-chain-sdk";
 import { NextResponse } from "next/server";
-import { Contract } from "ethers";
+import { Contract, ethers } from "ethers";
 import {
   getBlockExplorerLink,
   getTransactionLink,
@@ -8,7 +8,6 @@ import {
 import { ChainConfigs, getChainResolver } from "../../constants/contracts";
 import { getSrcDeployEvent } from "./escrow";
 import { deploySrcCallData, Resolver } from "./resolver";
-import ResolverABI from "./abi/Resolver.json";
 
 export async function POST(request: Request) {
   try {
@@ -289,6 +288,136 @@ export async function POST(request: Request) {
     // Debug smart contract requirements before sending
     console.log("[DEBUG] Checking smart contract requirements...");
 
+    // 1. Check ETH balance for safety deposit
+    const ethBalance = await srcChainResolver.provider.getBalance(
+      await srcChainResolver.getAddress()
+    );
+    console.log("[DEBUG] ETH Balance:", ethers.formatEther(ethBalance));
+    console.log(
+      "[DEBUG] Required safety deposit:",
+      ethers.formatEther(callData.value)
+    );
+    console.log(
+      "[DEBUG] ETH balance sufficient:",
+      ethBalance >= callData.value
+    );
+
+    // 2. Verify the LOP contract address the resolver expects
+    const resolverInterface = new ethers.Interface([
+      "function _LOP() view returns (address)",
+    ]);
+    try {
+      const lopAddress = await srcChainResolver.provider.call({
+        to: ChainConfigs[swapState.fromChain].ResolverContractAddress,
+        data: resolverInterface.encodeFunctionData("_LOP"),
+      });
+      const decodedLOP = resolverInterface.decodeFunctionResult(
+        "_LOP",
+        lopAddress
+      )[0];
+      console.log("[DEBUG] Resolver expects LOP at:", decodedLOP);
+      console.log(
+        "[DEBUG] Config LOP address:",
+        ChainConfigs[swapState.fromChain].LOP
+      );
+      console.log(
+        "[DEBUG] LOP addresses match:",
+        decodedLOP.toLowerCase() ===
+          ChainConfigs[swapState.fromChain].LOP.toLowerCase()
+      );
+    } catch (e) {
+      console.log(
+        "[DEBUG] Could not read LOP address from resolver:",
+        e instanceof Error ? e.message : "Unknown error"
+      );
+    }
+
+    // 3. Verify the escrow factory address
+    const factoryInterface = new ethers.Interface([
+      "function _FACTORY() view returns (address)",
+    ]);
+    try {
+      const factoryAddress = await srcChainResolver.provider.call({
+        to: ChainConfigs[swapState.fromChain].ResolverContractAddress,
+        data: factoryInterface.encodeFunctionData("_FACTORY"),
+      });
+      const decodedFactory = factoryInterface.decodeFunctionResult(
+        "_FACTORY",
+        factoryAddress
+      )[0];
+      console.log("[DEBUG] Resolver expects Factory at:", decodedFactory);
+      console.log(
+        "[DEBUG] Config Factory address:",
+        ChainConfigs[swapState.fromChain].EscrowFactory
+      );
+      console.log(
+        "[DEBUG] Factory addresses match:",
+        decodedFactory.toLowerCase() ===
+          ChainConfigs[swapState.fromChain].EscrowFactory.toLowerCase()
+      );
+    } catch (e) {
+      console.log(
+        "[DEBUG] Could not read Factory address from resolver:",
+        e instanceof Error ? e.message : "Unknown error"
+      );
+    }
+
+    // 4. Check if the resolver contract has the required ETH for safety deposit
+    const resolverEthBalance = await srcChainResolver.provider.getBalance(
+      ChainConfigs[swapState.fromChain].ResolverContractAddress
+    );
+    console.log(
+      "[DEBUG] Resolver ETH balance:",
+      ethers.formatEther(resolverEthBalance)
+    );
+    console.log(
+      "[DEBUG] Required safety deposit:",
+      ethers.formatEther(callData.value)
+    );
+
+    // 5. Verify the order parameters are valid
+    console.log("[DEBUG] Order validation:");
+    console.log("[DEBUG] - Order hash:", finalOrderHash);
+    console.log("[DEBUG] - Signature:", signature);
+    console.log("[DEBUG] - Immutables token:", immutables.token);
+    console.log("[DEBUG] - Immutables amount:", immutables.amount);
+    console.log("[DEBUG] - Fill amount:", fillAmount.toString());
+    console.log("[DEBUG] - Taker traits:", takerTraits);
+
+    // 6. Check if the LOP contract exists and is valid
+    try {
+      const lopCode = await srcChainResolver.provider.getCode(
+        ChainConfigs[swapState.fromChain].LOP
+      );
+      console.log("[DEBUG] LOP contract code length:", lopCode.length);
+      console.log("[DEBUG] LOP contract exists:", lopCode !== "0x");
+    } catch (e) {
+      console.log(
+        "[DEBUG] Could not check LOP contract:",
+        e instanceof Error ? e.message : "Unknown error"
+      );
+    }
+
+    // 7. Check if the EscrowFactory contract exists and is valid
+    try {
+      const factoryCode = await srcChainResolver.provider.getCode(
+        ChainConfigs[swapState.fromChain].EscrowFactory
+      );
+      console.log(
+        "[DEBUG] EscrowFactory contract code length:",
+        factoryCode.length
+      );
+      console.log(
+        "[DEBUG] EscrowFactory contract exists:",
+        factoryCode !== "0x"
+      );
+    } catch (e) {
+      console.log(
+        "[DEBUG] Could not check EscrowFactory contract:",
+        e instanceof Error ? e.message : "Unknown error"
+      );
+    }
+
     // Check and handle token approvals
     try {
       const ERC20_ABI = [
@@ -394,12 +523,12 @@ export async function POST(request: Request) {
       console.log(`[API] Waiting for transaction confirmation...`);
 
       const receipt = await tx.wait();
-      console.log(
-        `[API] Transaction confirmed in block: ${receipt.blockNumber}`
-      );
       if (!receipt) {
         throw new Error("Transaction receipt is null");
       }
+      console.log(
+        `[API] Transaction confirmed in block: ${receipt.blockNumber}`
+      );
       orderFillHash = receipt.hash;
       srcDeployBlock = receipt.blockHash;
 

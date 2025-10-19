@@ -42,7 +42,7 @@ export const ChainIds = {
 export const ChainConfigs = {
   [ChainIds.Sepolia]: {
     LOP: "0x111111125421cA6dc452d289314280a0f8842A65",
-    EscrowFactory: "0x61a32a9263c6ff568c66799a94f8fe09c1db7a66",
+    EscrowFactory: "0xF11B79631d6C74Ef2e3142D20B37Ded4f5F5B324",
     ResolverContractAddress: "0xb763BA9a8D756E5698Afc2EAC33C7b8f3A46A586",
     BLT: "0x0BF8E91b08b242cD7380bC92385C90c8270b37f0",
     EscrowSrcImplementationAddress:
@@ -53,7 +53,6 @@ export const ChainConfigs = {
     RpcUrl: "https://ethereum-sepolia-rpc.publicnode.com",
     // Alternative RPC endpoints for testing
     AlternativeRpcUrls: [
-      "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", // Infura
       "https://eth-sepolia.g.alchemy.com/v2/demo", // Alchemy
       "https://rpc.sepolia.org", // Sepolia Foundation
       "https://ethereum-sepolia.blockpi.network/v1/rpc/public", // BlockPI
