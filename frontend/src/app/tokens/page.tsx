@@ -189,7 +189,7 @@ const mockTokens: TokenData[] = [
     id: 2,
     name: "Wrapped Ethereum",
     symbol: "WETH",
-    address: "0x0000000000000000000000000000000000000000",
+    address: "0xfe9241e7b94bf0f5f0d8de0851c9421a38b54916",
     imageUrl: "/ethereum.png",
     totalEvents: 890,
     trackedSince: "2024-02-01T08:15:00Z",

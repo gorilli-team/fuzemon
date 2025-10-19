@@ -102,7 +102,7 @@ export default function TokenPage() {
         trackedSince: "2024-01-15T10:30:00Z",
         trackingTime: "45 days",
       },
-      "0x0000000000000000000000000000000000000000": {
+      "0xfe9241e7b94bf0f5f0d8de0851c9421a38b54916": {
         name: "Wrapped Ethereum",
         symbol: "WETH",
         address: address,
