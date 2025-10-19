@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import CandlestickChart from "@/app/components/CandlestickChart";
 import { Time } from "lightweight-charts";
-import pricesData from "../../../../data/prices_monad.json";
+import pricesData from "../../../../data/prices_all_tokens.json";
 
 interface TokenData {
   name: string;
@@ -126,25 +126,96 @@ export default function TokenPage() {
     );
   };
 
-  const mockTokenData = getTokenData(tokenAddress);
+  const mockTokenData = useMemo(
+    () => getTokenData(tokenAddress),
+    [tokenAddress]
+  );
 
-  // Process real price data for MON token
-  const getRealPriceData = (symbol: string): PriceData[] => {
-    if (symbol === "MON") {
-      // Get the price data from the JSON file
-      const priceDataKey = Object.keys(pricesData)[0];
-      const monadPrices = (pricesData as Record<string, MonadPriceData[]>)[
-        priceDataKey
-      ];
+  // Process real price data for all tokens
+  const getRealPriceData = (symbol: string, address: string): PriceData[] => {
+    // Get the price data for the specific token
+    const tokenPrices = (
+      pricesData as Record<string, Record<string, MonadPriceData[]>>
+    )[symbol];
+    if (tokenPrices && tokenPrices[address]) {
+      const monadPrices = tokenPrices[address];
 
-      // Convert to chart format, taking the most recent 50 data points
-      return monadPrices.slice(0, 50).map((price) => ({
+      // Create proper candlestick data by aggregating time periods
+      const candlestickData: MonadPriceData[] = [];
+      const threeHoursInMs = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+
+      // Group data by 3-hour time windows to create meaningful candlesticks
+      const timeGroups = new Map<string, MonadPriceData[]>();
+
+      monadPrices.forEach((price) => {
+        const timestamp = new Date(price.timestamp).getTime();
+        // Round down to the nearest 3-hour window
+        const windowStart =
+          Math.floor(timestamp / threeHoursInMs) * threeHoursInMs;
+        const windowKey = new Date(windowStart).toISOString();
+
+        if (!timeGroups.has(windowKey)) {
+          timeGroups.set(windowKey, []);
+        }
+        timeGroups.get(windowKey)!.push(price);
+      });
+
+      // Convert each time group into a proper candlestick
+      timeGroups.forEach((groupPrices, windowKey) => {
+        if (groupPrices.length > 0) {
+          // Sort by timestamp to get proper order
+          groupPrices.sort(
+            (a, b) =>
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+
+          // Calculate OHLC for this time period
+          const open = groupPrices[0].open;
+          const close = groupPrices[groupPrices.length - 1].close;
+          const high = Math.max(...groupPrices.map((p) => p.high));
+          const low = Math.min(...groupPrices.map((p) => p.low));
+          const volume = groupPrices.reduce((sum, p) => sum + p.volume, 0);
+
+          // Use the first timestamp as the representative time for this candlestick
+          const candlestick: MonadPriceData = {
+            ...groupPrices[0],
+            open,
+            high,
+            low,
+            close,
+            volume,
+            timestamp: windowKey,
+          };
+
+          candlestickData.push(candlestick);
+        }
+      });
+
+      // Sort by timestamp (newest first, like the original data)
+      candlestickData.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      // Convert to chart format, using the aggregated candlestick data
+      const chartData = candlestickData.map((price) => ({
         time: Math.floor(new Date(price.timestamp).getTime() / 1000) as Time,
         open: price.open,
         high: price.high,
         low: price.low,
         close: price.close,
       }));
+
+      // Debug logging to understand the data
+      console.log("Chart data points:", chartData.length);
+      console.log("Price range:", {
+        min: Math.min(...chartData.map((d) => d.close)),
+        max: Math.max(...chartData.map((d) => d.close)),
+        first: chartData[0]?.close,
+        last: chartData[chartData.length - 1]?.close,
+      });
+
+      return chartData;
     }
 
     // Fallback mock data for other tokens
@@ -208,50 +279,155 @@ export default function TokenPage() {
     ];
   };
 
-  const mockPriceData = getRealPriceData(mockTokenData.symbol);
+  const mockPriceData = useMemo(
+    () => getRealPriceData(mockTokenData.symbol, mockTokenData.address),
+    [mockTokenData.symbol, mockTokenData.address]
+  );
 
   // Get price points based on token
-  const getPricePoints = (symbol: string): PricePoints => {
-    if (symbol === "MON") {
-      // Get real price data from the JSON file
-      const priceDataKey = Object.keys(pricesData)[0];
-      const monadPrices = (pricesData as Record<string, MonadPriceData[]>)[
-        priceDataKey
-      ];
+  const getPricePoints = (symbol: string, address: string): PricePoints => {
+    // Get real price data for the specific token
+    const tokenPrices = (
+      pricesData as Record<string, Record<string, MonadPriceData[]>>
+    )[symbol];
+    if (tokenPrices && tokenPrices[address]) {
+      const monadPrices = tokenPrices[address];
 
       if (monadPrices.length > 0) {
-        const current = monadPrices[0].close;
-        const oneHourAgo =
-          monadPrices[Math.min(60, monadPrices.length - 1)].close;
-        const sixHoursAgo =
-          monadPrices[Math.min(360, monadPrices.length - 1)].close;
-        const twentyFourHoursAgo =
-          monadPrices[Math.min(1440, monadPrices.length - 1)].close;
+        // Create proper candlestick data by aggregating time periods
+        const candlestickData: MonadPriceData[] = [];
+        const threeHoursInMs = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
 
-        return {
-          current,
-          oneHourAgo,
-          sixHoursAgo,
-          twentyFourHoursAgo,
-          timestamps: {
-            current: monadPrices[0].timestamp,
-            oneHourAgo:
-              monadPrices[Math.min(60, monadPrices.length - 1)].timestamp,
-            sixHoursAgo:
-              monadPrices[Math.min(360, monadPrices.length - 1)].timestamp,
-            twentyFourHoursAgo:
-              monadPrices[Math.min(1440, monadPrices.length - 1)].timestamp,
-          },
-        };
+        // Group data by 3-hour time windows to create meaningful candlesticks
+        const timeGroups = new Map<string, MonadPriceData[]>();
+
+        monadPrices.forEach((price) => {
+          const timestamp = new Date(price.timestamp).getTime();
+          // Round down to the nearest 3-hour window
+          const windowStart =
+            Math.floor(timestamp / threeHoursInMs) * threeHoursInMs;
+          const windowKey = new Date(windowStart).toISOString();
+
+          if (!timeGroups.has(windowKey)) {
+            timeGroups.set(windowKey, []);
+          }
+          timeGroups.get(windowKey)!.push(price);
+        });
+
+        // Convert each time group into a proper candlestick
+        timeGroups.forEach((groupPrices, windowKey) => {
+          if (groupPrices.length > 0) {
+            // Sort by timestamp to get proper order
+            groupPrices.sort(
+              (a, b) =>
+                new Date(a.timestamp).getTime() -
+                new Date(b.timestamp).getTime()
+            );
+
+            // Calculate OHLC for this time period
+            const open = groupPrices[0].open;
+            const close = groupPrices[groupPrices.length - 1].close;
+            const high = Math.max(...groupPrices.map((p) => p.high));
+            const low = Math.min(...groupPrices.map((p) => p.low));
+            const volume = groupPrices.reduce((sum, p) => sum + p.volume, 0);
+
+            // Use the first timestamp as the representative time for this candlestick
+            const candlestick: MonadPriceData = {
+              ...groupPrices[0],
+              open,
+              high,
+              low,
+              close,
+              volume,
+              timestamp: windowKey,
+            };
+
+            candlestickData.push(candlestick);
+          }
+        });
+
+        // Sort by timestamp (newest first, like the original data)
+        candlestickData.sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+
+        if (candlestickData.length > 0) {
+          // Use the most recent data point as current
+          const current = candlestickData[0].close;
+
+          // Calculate time-based comparisons using the full timeframe
+          const now = Date.now() / 1000;
+          const oneHourAgo = now - 3600;
+          const sixHoursAgo = now - 3600 * 6;
+          const twentyFourHoursAgo = now - 3600 * 24;
+
+          // Find closest data points to these times
+          let oneHourPrice = current;
+          let sixHoursPrice = current;
+          let twentyFourHoursPrice = current;
+          let oneHourTimestamp = candlestickData[0].timestamp;
+          let sixHoursTimestamp = candlestickData[0].timestamp;
+          let twentyFourHoursTimestamp = candlestickData[0].timestamp;
+
+          for (const dataPoint of candlestickData) {
+            const dataTime = new Date(dataPoint.timestamp).getTime() / 1000;
+
+            if (
+              dataTime <= oneHourAgo &&
+              Math.abs(dataTime - oneHourAgo) <
+                Math.abs(
+                  new Date(oneHourTimestamp).getTime() / 1000 - oneHourAgo
+                )
+            ) {
+              oneHourPrice = dataPoint.close;
+              oneHourTimestamp = dataPoint.timestamp;
+            }
+            if (
+              dataTime <= sixHoursAgo &&
+              Math.abs(dataTime - sixHoursAgo) <
+                Math.abs(
+                  new Date(sixHoursTimestamp).getTime() / 1000 - sixHoursAgo
+                )
+            ) {
+              sixHoursPrice = dataPoint.close;
+              sixHoursTimestamp = dataPoint.timestamp;
+            }
+            if (
+              dataTime <= twentyFourHoursAgo &&
+              Math.abs(dataTime - twentyFourHoursAgo) <
+                Math.abs(
+                  new Date(twentyFourHoursTimestamp).getTime() / 1000 -
+                    twentyFourHoursAgo
+                )
+            ) {
+              twentyFourHoursPrice = dataPoint.close;
+              twentyFourHoursTimestamp = dataPoint.timestamp;
+            }
+          }
+
+          return {
+            current,
+            oneHourAgo: oneHourPrice,
+            sixHoursAgo: sixHoursPrice,
+            twentyFourHoursAgo: twentyFourHoursPrice,
+            timestamps: {
+              current: candlestickData[0].timestamp,
+              oneHourAgo: oneHourTimestamp,
+              sixHoursAgo: sixHoursTimestamp,
+              twentyFourHoursAgo: twentyFourHoursTimestamp,
+            },
+          };
+        }
       }
     }
 
     const priceMap: Record<string, PricePoints> = {
       MON: {
-        current: 0.6,
-        oneHourAgo: 0.59,
-        sixHoursAgo: 0.58,
-        twentyFourHoursAgo: 0.55,
+        current: 3.79,
+        oneHourAgo: 3.78,
+        sixHoursAgo: 3.75,
+        twentyFourHoursAgo: 3.22,
         timestamps: {
           current: new Date().toISOString(),
           oneHourAgo: new Date(Date.now() - 3600000).toISOString(),
@@ -260,10 +436,10 @@ export default function TokenPage() {
         },
       },
       WETH: {
-        current: 1.25,
-        oneHourAgo: 1.24,
-        sixHoursAgo: 1.23,
-        twentyFourHoursAgo: 1.2,
+        current: 3249.87,
+        oneHourAgo: 3250.45,
+        sixHoursAgo: 3248.3,
+        twentyFourHoursAgo: 3245.12,
         timestamps: {
           current: new Date().toISOString(),
           oneHourAgo: new Date(Date.now() - 3600000).toISOString(),
@@ -272,10 +448,10 @@ export default function TokenPage() {
         },
       },
       CHOG: {
-        current: 0.85,
-        oneHourAgo: 0.84,
-        sixHoursAgo: 0.82,
-        twentyFourHoursAgo: 0.8,
+        current: 0.000124,
+        oneHourAgo: 0.000125,
+        sixHoursAgo: 0.000122,
+        twentyFourHoursAgo: 0.000118,
         timestamps: {
           current: new Date().toISOString(),
           oneHourAgo: new Date(Date.now() - 3600000).toISOString(),
@@ -301,7 +477,10 @@ export default function TokenPage() {
     );
   };
 
-  const mockPricePoints = getPricePoints(mockTokenData.symbol);
+  const mockPricePoints = useMemo(
+    () => getPricePoints(mockTokenData.symbol, mockTokenData.address),
+    [mockTokenData.symbol, mockTokenData.address]
+  );
 
   // Mock completed trades based on token
   const getCompletedTrades = (symbol: string): CompletedTrade[] => {
@@ -389,15 +568,27 @@ export default function TokenPage() {
     return tradesMap[symbol] || [];
   };
 
-  const mockCompletedTrades = getCompletedTrades(mockTokenData.symbol);
+  const mockCompletedTrades = useMemo(
+    () => getCompletedTrades(mockTokenData.symbol),
+    [mockTokenData.symbol]
+  );
 
   useEffect(() => {
     const fetchTokenInfo = async () => {
       try {
         setIsLoading(true);
+        setError(null);
+
+        // Add timeout to prevent infinite loading
+        const timeoutId = setTimeout(() => {
+          setError("Loading timeout - please refresh the page");
+          setIsLoading(false);
+        }, 10000); // 10 second timeout
+
         // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
+        clearTimeout(timeoutId);
         setToken(mockTokenData);
         setPriceData(mockPriceData);
         setPricePoints(mockPricePoints);
@@ -441,7 +632,10 @@ export default function TokenPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-white text-xl">Loading token information...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <div className="text-white text-xl">Loading token information...</div>
+        </div>
       </div>
     );
   }

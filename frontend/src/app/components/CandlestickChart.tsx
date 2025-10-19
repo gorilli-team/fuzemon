@@ -448,11 +448,17 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, signals }) => {
     } catch (error) {
       console.error("Error initializing chart:", error);
     }
-  }, [data, isClient, timeRange, allTimeHighLow]);
+  }, [data, isClient]);
 
   // Server-side and initial client render
   if (!isClient || !data || data.length === 0) {
-    return <div className="w-full"></div>;
+    return (
+      <div className="w-full">
+        <div className="h-[300px] flex items-center justify-center text-dark-400">
+          {!isClient ? "Loading chart..." : "No data available"}
+        </div>
+      </div>
+    );
   }
 
   return (

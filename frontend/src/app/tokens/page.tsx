@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import pricesData from "../../../data/prices_monad.json";
+import pricesData from "../../../data/prices_all_tokens.json";
 
 interface TokenData {
   id: number;
@@ -33,24 +33,101 @@ interface MonadPriceData {
   updated_at: string;
 }
 
-// Get real price data for MON token
-const getRealMonPrice = () => {
-  const priceDataKey = Object.keys(pricesData)[0];
-  const monadPrices = (pricesData as Record<string, MonadPriceData[]>)[
-    priceDataKey
-  ];
+// Get real price data for all tokens
+const getRealTokenPrice = (symbol: string, address: string) => {
+  const tokenPrices = (
+    pricesData as Record<string, Record<string, MonadPriceData[]>>
+  )[symbol];
+  if (tokenPrices && tokenPrices[address]) {
+    const monadPrices = tokenPrices[address];
 
-  if (monadPrices.length > 0) {
-    const current = monadPrices[0].close;
-    const twentyFourHoursAgo =
-      monadPrices[Math.min(1440, monadPrices.length - 1)].close;
-    const priceChange24h =
-      ((current - twentyFourHoursAgo) / twentyFourHoursAgo) * 100;
+    if (monadPrices.length > 0) {
+      // Create proper candlestick data by aggregating time periods
+      const candlestickData: MonadPriceData[] = [];
+      const threeHoursInMs = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
 
-    return {
-      currentPrice: current,
-      priceChange24h: priceChange24h,
-    };
+      // Group data by 3-hour time windows to create meaningful candlesticks
+      const timeGroups = new Map<string, MonadPriceData[]>();
+
+      monadPrices.forEach((price) => {
+        const timestamp = new Date(price.timestamp).getTime();
+        // Round down to the nearest 3-hour window
+        const windowStart =
+          Math.floor(timestamp / threeHoursInMs) * threeHoursInMs;
+        const windowKey = new Date(windowStart).toISOString();
+
+        if (!timeGroups.has(windowKey)) {
+          timeGroups.set(windowKey, []);
+        }
+        timeGroups.get(windowKey)!.push(price);
+      });
+
+      // Convert each time group into a proper candlestick
+      timeGroups.forEach((groupPrices, windowKey) => {
+        if (groupPrices.length > 0) {
+          // Sort by timestamp to get proper order
+          groupPrices.sort(
+            (a, b) =>
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+
+          // Calculate OHLC for this time period
+          const open = groupPrices[0].open;
+          const close = groupPrices[groupPrices.length - 1].close;
+          const high = Math.max(...groupPrices.map((p) => p.high));
+          const low = Math.min(...groupPrices.map((p) => p.low));
+          const volume = groupPrices.reduce((sum, p) => sum + p.volume, 0);
+
+          // Use the first timestamp as the representative time for this candlestick
+          const candlestick: MonadPriceData = {
+            ...groupPrices[0],
+            open,
+            high,
+            low,
+            close,
+            volume,
+            timestamp: windowKey,
+          };
+
+          candlestickData.push(candlestick);
+        }
+      });
+
+      // Sort by timestamp (newest first, like the original data)
+      candlestickData.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      if (candlestickData.length > 0) {
+        const current = candlestickData[0].close;
+
+        // Find the closest data point to 24 hours ago using the full timeframe
+        const now = Date.now() / 1000;
+        const twentyFourHoursAgo = now - 3600 * 24;
+
+        let twentyFourHoursPrice = current;
+        let closestTimeDiff = Infinity;
+
+        for (const dataPoint of candlestickData) {
+          const dataTime = new Date(dataPoint.timestamp).getTime() / 1000;
+          const timeDiff = Math.abs(dataTime - twentyFourHoursAgo);
+
+          if (dataTime <= twentyFourHoursAgo && timeDiff < closestTimeDiff) {
+            twentyFourHoursPrice = dataPoint.close;
+            closestTimeDiff = timeDiff;
+          }
+        }
+
+        const priceChange24h =
+          ((current - twentyFourHoursPrice) / twentyFourHoursPrice) * 100;
+
+        return {
+          currentPrice: current,
+          priceChange24h: priceChange24h,
+        };
+      }
+    }
   }
 
   return {
@@ -59,7 +136,18 @@ const getRealMonPrice = () => {
   };
 };
 
-const monPriceData = getRealMonPrice();
+const monPriceData = getRealTokenPrice(
+  "MON",
+  "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+) || { currentPrice: 3.79, priceChange24h: 5.8 };
+const wethPriceData = getRealTokenPrice(
+  "WETH",
+  "0x0000000000000000000000000000000000000000"
+) || { currentPrice: 3249.87, priceChange24h: 1.2 };
+const chogPriceData = getRealTokenPrice(
+  "CHOG",
+  "0xE0590015A873bF326bd645c3E1266d4db41C4E6B"
+) || { currentPrice: 0.000124, priceChange24h: 2.5 };
 
 // Real tokens from Gorillionaire
 const mockTokens: TokenData[] = [
@@ -85,8 +173,8 @@ const mockTokens: TokenData[] = [
     totalEvents: 890,
     trackedSince: "2024-02-01T08:15:00Z",
     trackingTime: "30 days",
-    currentPrice: 1.25,
-    priceChange24h: -2.3,
+    currentPrice: wethPriceData.currentPrice,
+    priceChange24h: wethPriceData.priceChange24h,
   },
   {
     id: 3,
@@ -98,8 +186,8 @@ const mockTokens: TokenData[] = [
     totalEvents: 2100,
     trackedSince: "2024-01-01T00:00:00Z",
     trackingTime: "60 days",
-    currentPrice: 0.85,
-    priceChange24h: 12.5,
+    currentPrice: chogPriceData.currentPrice,
+    priceChange24h: chogPriceData.priceChange24h,
   },
 ];
 
@@ -111,8 +199,17 @@ export default function TokensPage() {
     const fetchTokens = async () => {
       try {
         setLoading(true);
+
+        // Add timeout to prevent infinite loading
+        const timeoutId = setTimeout(() => {
+          console.error("Loading timeout");
+          setLoading(false);
+        }, 10000); // 10 second timeout
+
         // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        clearTimeout(timeoutId);
         setTokens(mockTokens);
       } catch (error) {
         console.error("Error fetching tokens:", error);
@@ -139,7 +236,10 @@ export default function TokensPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-white text-xl">Loading tokens...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <div className="text-white text-xl">Loading tokens...</div>
+        </div>
       </div>
     );
   }
